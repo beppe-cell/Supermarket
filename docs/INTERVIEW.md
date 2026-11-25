@@ -18,3 +18,9 @@
 - Tono orrore: realistico quotidiano
 - Palette: rosso sangue su grigio freddo
 - Riferimenti: nessuno preciso (proposte da fare in fase documenti, soggette ad approvazione)
+
+## D. Personaggi e nemici (risposto)
+- Nemici: umani infetti (ex clienti e dipendenti) + altri giocatori in PvP (IMPLICA MULTIPLAYER: da chiarire, vedi sotto)
+- Varianti prima versione: 3-4 tipi
+- Dettaglio: mid-poly con normal map baked da sculpt (~10-20k tri, texture 1K-2K, LOD)
+- Braccia/armi in prima persona: molto curate
