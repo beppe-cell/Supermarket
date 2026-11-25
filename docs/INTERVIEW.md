@@ -24,3 +24,9 @@
 - Varianti prima versione: 3-4 tipi
 - Dettaglio: mid-poly con normal map baked da sculpt (~10-20k tri, texture 1K-2K, LOD)
 - Braccia/armi in prima persona: molto curate
+- PvP (D5): prima single-player, PvP in fase successiva; codice predisposto (stato di gioco serializzabile, input astratto)
+
+## E. Ambientazioni (risposto)
+- Dimensione: ipermercato / centro commerciale (RISCHIO mobile: richiede streaming a zone, LOD pesanti, occlusion; da valutare nel TDD)
+- Interattività: prodotti raccoglibili; porte/casse/frigoriferi apribili; oggetti fisici (carrelli, cartoni). Distruttibilità: no
+- Luci: neon che sfarfallano; torcia giocatore principale; luci d'emergenza rosse; nebbia volumetrica leggera
