@@ -1,5 +1,5 @@
 # Stato progetto
-- Fase corrente: 6 — intervista Art Director (blocco A completato)
+- Fase corrente: 6 — intervista Art Director (blocchi A-B completati)
 - Framework: creato (Fase 5)
 - Gioco: NON iniziato (attesa approvazione documenti)
 ## Decisioni approvate
