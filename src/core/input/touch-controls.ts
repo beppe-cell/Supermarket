@@ -12,6 +12,7 @@ export class TouchInput implements InputSource {
   private dy = 0;
   private fire = false;
   private interact = false;
+  private torchBtn = false;
   private readonly root: HTMLDivElement;
   private readonly stick: HTMLDivElement;
   private readonly abort = new AbortController();
@@ -22,7 +23,7 @@ export class TouchInput implements InputSource {
     this.root.style.cssText = "position:fixed;inset:0;pointer-events:none;touch-action:none;user-select:none";
     this.stick = document.createElement("div");
     this.stick.style.cssText = "position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;background:#ffffff33;display:none";
-    this.root.append(this.stick, this.button("FUOCO", "right:24px;bottom:120px", (v) => (this.fire = v)), this.button("USA", "right:120px;bottom:40px", (v) => (this.interact = v)));
+    this.root.append(this.stick, this.button("FUOCO", "right:24px;bottom:120px", (v) => (this.fire = v)), this.button("USA", "right:120px;bottom:40px", (v) => (this.interact = v)), this.button("LUCE", "right:24px;bottom:230px", (v) => (this.torchBtn = v)));
     parent.appendChild(this.root);
 
     const o = { signal: this.abort.signal, passive: false } as const;
@@ -88,6 +89,7 @@ export class TouchInput implements InputSource {
     this.dx = 0; this.dy = 0;
     out.fire ||= this.fire;
     out.interact ||= this.interact;
+    out.torch ||= this.torchBtn;
   }
 
   dispose(): void { this.abort.abort(); this.root.remove(); }

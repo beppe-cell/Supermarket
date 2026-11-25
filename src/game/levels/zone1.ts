@@ -1,0 +1,42 @@
+/** Dati livello Z1 "Sala vendita" (greybox). Unità: metri. Il builder legge solo questi dati. */
+export interface Box { x: number; z: number; w: number; d: number; h?: number; y?: number }
+export interface DoorDef { id: string; x: number; z: number; w: number; axis: "x" | "z"; locked?: boolean; label: string }
+export interface PickupDef { id: string; x: number; y: number; z: number; label: string }
+export interface LightDef { x: number; z: number }
+
+export const ZONE1 = {
+  id: "z1",
+  bounds: { minX: -20, maxX: 20, minZ: -15, maxZ: 15 },
+  ceiling: 3.6,
+  spawn: { x: 0, z: -12, yaw: 0 },
+  /** Muri perimetrali e interni: centro + dimensioni. */
+  walls: [
+    { x: 0, z: 15, w: 40, d: 0.4 }, // nord (reparto frigo)
+    { x: -20, z: 0, w: 0.4, d: 30 }, // ovest
+    { x: 0, z: -15, w: 40, d: 0.4 }, // sud (ingresso)
+    { x: 20, z: 9, w: 0.4, d: 12 }, // est (con porta magazzino)
+    { x: 20, z: -9, w: 0.4, d: 12 },
+    { x: 14, z: -6, w: 12, d: 0.3 }, // parete casse
+  ] as Box[],
+  doors: [
+    { id: "door-warehouse", x: 20, z: 0, w: 4, axis: "z", locked: true, label: "Porta magazzino" },
+    { id: "door-entrance", x: -15, z: -15, w: 4, axis: "x", locked: true, label: "Ingresso (chiuso)" },
+  ] as DoorDef[],
+  /** Scaffali: 8 corsie nord-sud. */
+  shelves: Array.from({ length: 8 }, (_, i): Box => ({ x: -14 + i * 3.6, z: 3, w: 0.9, d: 16, h: 2.0 })),
+  pillars: [-10, 0, 10].flatMap((x) => [-10, 10].map((z): Box => ({ x, z, w: 0.8, d: 0.8, h: 3.6 }))),
+  checkouts: [8, 11, 14, 17].map((x): Box => ({ x: x + 0.5, z: -11, w: 0.9, d: 2.2, h: 1.0 })),
+  freezers: Array.from({ length: 6 }, (_, i): Box => ({ x: -16 + i * 5.2, z: 14, w: 4.4, d: 1, h: 2.1 })),
+  pickups: [
+    { id: "key-warehouse", x: 1.8, y: 1.0, z: 13.2, label: "Chiave magazzino" },
+    { id: "med-1", x: -14, y: 1.2, z: -2, label: "Garze" },
+    { id: "can-1", x: -7, y: 1.2, z: 6, label: "Lattina di cibo" },
+    { id: "bat-1", x: 3, y: 1.2, z: -4, label: "Batterie" },
+    { id: "alc-1", x: 7.2, y: 1.2, z: 3, label: "Alcol" },
+  ] as PickupDef[],
+  /** Neon: ogni punto genera una striscia emissiva; alcuni anche luce dinamica. */
+  neons: Array.from({ length: 5 }, (_, r) => Array.from({ length: 4 }, (_, c): LightDef => ({ x: -15 + c * 10, z: -10 + r * 6 }))).flat(),
+  emergencyLights: [{ x: 19, z: 0 }, { x: -19, z: -14 }, { x: -19, z: 14 }] as LightDef[],
+};
+
+export type Zone1Data = typeof ZONE1;

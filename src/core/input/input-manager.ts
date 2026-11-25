@@ -15,7 +15,7 @@ export class InputManager {
   poll(): InputState {
     const s = this.state;
     s.moveX = 0; s.moveY = 0; s.lookDX = 0; s.lookDY = 0;
-    s.sprint = false; s.crouch = false; s.fire = false; s.interact = false;
+    s.sprint = false; s.crouch = false; s.fire = false; s.interact = false; s.torch = false;
     for (const src of this.sources) src.poll(s);
     return s;
   }

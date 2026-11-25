@@ -1,0 +1,37 @@
+// Test M1: movimento, collisioni e interazione. Uso: node tests/e2e/gameplay.mjs <url>
+import { createRequire } from "node:module";
+const { chromium } = createRequire(import.meta.url)("playwright");
+const url = (process.argv[2] ?? "http://localhost:4173/") + "?debug=1&quality=low";
+const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist", "--no-sandbox"] });
+const page = await (await browser.newContext({ viewport: { width: 1000, height: 600 } })).newPage();
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+await page.goto(url);
+await page.waitForFunction(() => window.__dbg, null, { timeout: 30000 });
+const results = [];
+const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "OK  " : "FAIL"} ${name} ${info}`); };
+
+const p0 = await page.evaluate(() => window.__dbg.pos());
+await page.keyboard.down("KeyW"); await page.waitForTimeout(2000); await page.keyboard.up("KeyW");
+const p1 = await page.evaluate(() => window.__dbg.pos());
+check("cammina avanti (+z)", p1[2] - p0[2] > 0.8, `z ${p0[2].toFixed(1)} -> ${p1[2].toFixed(1)}`);
+
+// collisione col muro sud: teletrasporto vicino al muro e spinta indietro
+await page.evaluate(() => window.__dbg.teleport(0, -14));
+await page.waitForTimeout(300);
+await page.keyboard.down("KeyS"); await page.waitForTimeout(2500); await page.keyboard.up("KeyS");
+const p2 = await page.evaluate(() => window.__dbg.pos());
+check("muro sud blocca", p2[2] > -15, `z=${p2[2].toFixed(2)}`);
+
+// pickup: vicino alla batteria, guardando avanti (+z) -> pickup a (3,1.2,-4)
+await page.evaluate(() => window.__dbg.teleport(3, -5.2));
+await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
+await page.waitForTimeout(500);
+await page.keyboard.press("KeyE"); await page.waitForTimeout(300);
+const inv = await page.evaluate(() => window.__dbg.inventory());
+check("raccoglie oggetto con E", inv.includes("bat-1"), JSON.stringify(inv));
+check("nessun errore console", errors.length === 0, JSON.stringify(errors));
+await page.screenshot({ path: "tests/e2e/out-gameplay.png" });
+await browser.close();
+process.exit(results.every(Boolean) ? 0 : 1);
