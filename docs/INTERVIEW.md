@@ -30,3 +30,9 @@
 - Dimensione: ipermercato / centro commerciale (RISCHIO mobile: richiede streaming a zone, LOD pesanti, occlusion; da valutare nel TDD)
 - Interattività: prodotti raccoglibili; porte/casse/frigoriferi apribili; oggetti fisici (carrelli, cartoni). Distruttibilità: no
 - Luci: neon che sfarfallano; torcia giocatore principale; luci d'emergenza rosse; nebbia volumetrica leggera
+
+## F. Grafica e tecnologia (risposto)
+- API: WebGL2 base + WebGPU opzionale
+- Profili qualità: 3 automatici (Alto PC / Medio / Basso mobile) + scelta manuale
+- Post-FX: grana+vignettatura, bloom, aberrazione cromatica/distorsione (sanità mentale), SSAO/SSR (solo profilo alto)
+- Target: PC 60 fps, mobile 30 fps
