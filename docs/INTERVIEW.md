@@ -44,3 +44,12 @@
 ## H. Audio (risposto)
 - Colonna sonora ambient/drone dinamica; audio ambientale (frigoriferi, neon, musica da negozio distorta); audio spaziale 3D. Niente doppiaggio
 - Fonte: CC0 + sintesi procedurale
+
+## I. Produzione (risposto)
+- Portata: vertical slice di 1-2 zone rifinite, poi espansione
+- Priorità n.1: atmosfera e qualità visiva
+- Risorse: l'Art Director fornirà alcuni asset (formato/licenze da definire) + produzione Blender/CC0
+
+## L. Pubblicazione (risposto)
+- Hosting: alternativo gratuito (Cloudflare Pages / Netlify). GitHub Pages non selezionato
+- Salvataggi: non selezionato → proposta default: IndexedDB locale (da confermare)
