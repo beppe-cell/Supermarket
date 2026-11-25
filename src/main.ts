@@ -1,5 +1,4 @@
-import { createEngine } from "./core/engine-factory";
+import { Game } from "./core/game";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
-const engine = await createEngine(canvas);
-window.addEventListener("resize", () => engine.resize());
+await new Game(canvas).start();

@@ -3,3 +3,4 @@ dist/
 .venv-blender/
 *.blend1
 .DS_Store
+tests/e2e/out-*.png
