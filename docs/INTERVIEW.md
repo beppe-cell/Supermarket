@@ -36,3 +36,11 @@
 - Profili qualità: 3 automatici (Alto PC / Medio / Basso mobile) + scelta manuale
 - Post-FX: grana+vignettatura, bloom, aberrazione cromatica/distorsione (sanità mentale), SSAO/SSR (solo profilo alto)
 - Target: PC 60 fps, mobile 30 fps
+
+## G. Piattaforme (risposto)
+- PC (Chrome/Edge/Firefox), Android (Chrome), iOS (Safari). Tablet non richiesto esplicitamente
+- Controlli: tastiera+mouse (pointer lock), touch con joystick virtuali. Gamepad e giroscopio non richiesti
+
+## H. Audio (risposto)
+- Colonna sonora ambient/drone dinamica; audio ambientale (frigoriferi, neon, musica da negozio distorta); audio spaziale 3D. Niente doppiaggio
+- Fonte: CC0 + sintesi procedurale
