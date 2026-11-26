@@ -50,3 +50,4 @@
 - Verifica articolazioni: corretto un bug del rig (rotazioni non coniugate con la posa dei genitori: i gomiti non si piegavano). Controlli automatici su tutte le clip (angoli di gomito/ginocchio, iperestensione, suolo): gomito ≤ 116°, ginocchio ≤ 98°, nessuna iperestensione, nessun affondamento nel pavimento.
 - Controlli touch (2026-11-26): RICARICA, ABBASSA e TORCIA spostati in colonna sul bordo sinistro; in basso a destra resta solo FUOCO, con tutta la zona libera per ruotare la visuale col pollice.
 - Controlli touch, revisione (2026-11-26): RICARICA, ABBASSA e TORCIA in colonna nella zona centro-destra (29% dal bordo destro, dal 24% dell'altezza), staccati da FUOCO; la parte bassa resta libera per la visuale.
+- Controlli touch, revisione 2 (2026-11-26): RICARICA, ABBASSA e TORCIA su un arco attorno a FUOCO (raggio 155 px, da dritto sopra a sinistra), non più in fila.

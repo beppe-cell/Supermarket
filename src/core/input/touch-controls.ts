@@ -62,10 +62,10 @@ export class TouchInput implements InputSource {
       this.root.appendChild(el); this.btns.set(name, el); return el;
     };
     this.hold(place("fire", "", "fire", 98, 0, 0, "fire"), (v) => { this.fire = v; if (v) navigator.vibrate?.(12); });
-    // Gli altri pulsanti stanno in colonna nella parte alta della zona centro-destra, ben staccati da FUOCO (evita pressioni involontarie); la parte bassa resta libera per ruotare la visuale
+    // Gli altri pulsanti stanno su un arco attorno a FUOCO (sopra e a sinistra), a 155 px di distanza: lontani abbastanza da non toccarli per sbaglio
     const side = (name: string, label: string, icon: string, k: number) => {
-      const el = place(name, label, icon, 54, 0, 0); el.style.bottom = "auto";
-      el.style.left = "auto"; el.style.right = "29%"; el.style.top = `calc(24% + ${k * 76}px)`; return el;
+      const ang = ((12 + k * 33) * Math.PI) / 180, R = 155;                  // 0° = dritto sopra, 90° = dritto a sinistra
+      return place(name, label, icon, 54, Math.round(R * Math.sin(ang)), Math.round(R * Math.cos(ang)));
     };
     this.hold(side("reload", "RICARICA", "reload", 0), (v) => { this.reload = v; });
     this.tap(side("crouch", "ABBASSA", "crouch", 1), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
