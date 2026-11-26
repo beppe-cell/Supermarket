@@ -54,4 +54,15 @@ height = inner * 0.4 + 0.25 * n2
 rough = 0.85 + 0.1 * n1
 ao = 0.6 + 0.4 * inner
 save("ceiling", col, height, rough, ao, 0.0, 4.0)
+# --- Acciaio verniciato grigio sporco (accenti degli scaffali): look "vecchio" procedurale, 512 ripetibile -------------
+n = 512
+g1, g2, g3 = pnoise(n, 2.2, 31), pnoise(n, 1.4, 32), pnoise(n, 3.0, 33)
+yy = np.linspace(0, 2 * np.pi, n, endpoint=False)[:, None]
+grime = np.clip(0.55 * g1 + 0.35 * (0.5 + 0.5 * np.cos(yy)) * g3 - 0.12, 0, 1)  # più sporco verso il basso
+chips = np.clip((g2 - 0.8) * 6, 0, 1)  # scheggiature di vernice
+base = np.array([0.66, 0.69, 0.72])[None, None, :]
+dirt = np.array([0.17, 0.16, 0.15])[None, None, :]
+col = base * (1 - grime[..., None] * 0.8) + dirt * grime[..., None] * 0.8
+col = col * (1 - 0.5 * chips[..., None]) + np.array([0.55, 0.57, 0.6])[None, None, :] * 0.5 * chips[..., None]
+save("shelfpaint", col, 0.5 * g1 + 0.5 * g3 + chips * 0.6, 0.45 + 0.3 * grime, 0.7 + 0.3 * (1 - grime), 0.2 + 0.5 * chips, 3.0)
 print("TEXTURES ok", sorted(os.listdir(out)))
