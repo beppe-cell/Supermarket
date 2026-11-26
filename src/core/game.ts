@@ -50,7 +50,6 @@ export class Game {
       addItem: (id: string, label: string) => { this.inventory.set(id, label); hud.setInventory([...this.inventory.values()]); },
       message: (t: string) => hud.message(t),
     };
-    hud.message(`Look ${look.name}`);
 
     const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
     let target: Interactable | undefined;

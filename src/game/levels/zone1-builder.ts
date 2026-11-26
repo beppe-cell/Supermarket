@@ -164,15 +164,15 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
 
 /** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */
 function placeProps(props: Props): void {
-  const SHELF_W = 1.72;
+  const SHELF_W = 1.2;
   for (const sh of ZONE1.shelves) {
     const n = Math.floor(sh.d / SHELF_W);
     const z0 = sh.z - (n * SHELF_W) / 2 + SHELF_W / 2;
     for (let i = 0; i < n; i++) {
       const z = z0 + i * SHELF_W;
-      // schiena contro schiena: fronte verso la corsia (sinistra -X, destra +X)
-      props.spawn("SM_Shelf", sh.x - 0.32, z, Math.PI / 2);
-      props.spawn("SM_Shelf", sh.x + 0.32, z, -Math.PI / 2);
+      // schiena contro schiena: fronte verso la corsia (sinistra -X, destra +X); fronte nativo = +Z
+      props.spawn("SM_Shelf_Unit", sh.x - 0.27, z, -Math.PI / 2);
+      props.spawn("SM_Shelf_Unit", sh.x + 0.27, z, Math.PI / 2);
     }
   }
   for (const f of ZONE1.freezers) {

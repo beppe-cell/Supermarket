@@ -13,7 +13,7 @@ describe("Zone1 data", () => {
   });
   it("corsie libere >= 3 m (passaggio)", () => {
     const xs = ZONE1.shelves.map((s) => s.x).sort((a, b) => a - b);
-    for (let i = 1; i < xs.length; i++) expect((xs[i] ?? 0) - (xs[i - 1] ?? 0) - 1.3).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < xs.length; i++) expect((xs[i] ?? 0) - (xs[i - 1] ?? 0) - 1.1).toBeGreaterThanOrEqual(3);
   });
   it("id pickup e porte univoci", () => {
     const ids = [...ZONE1.pickups.map((p) => p.id), ...ZONE1.doors.map((d) => d.id)];

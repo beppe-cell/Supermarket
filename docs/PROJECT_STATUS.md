@@ -23,5 +23,5 @@
 - Look C approvato (decisione 0002).
 - Asset T03 (AspectStudios, CC-BY) importato e ripulito via bpy headless (`tools/clean_props_pack.py`); caricato in Z1 con istanze (scaffali 144, frigoriferi, banconi+casse, scatoloni); i box grigi restano come collisioni invisibili.
 - ATTENZIONE: lo stile del pack (lowpoly, colori piatti arancio/rosso) non corrisponde al look realistico approvato → placeholder; serve ri-texturing PBR in Blender o sostituzione. Decisione dell'Art Director.
-- Scaffali: schiena contro schiena, blocchi da 1.3 m a passo 4.4 m (corsie libere 3.1 m); bug rotazione istanze corretto (rotationQuaternion).
+- Scaffali: sostituiti con SM_Shelf_Unit originale (tools/make_shelf.py: 3.5k tri + LOD1 1k tri, PBR, texture baked sporco), schiena contro schiena, blocchi da 1.1 m a passo 4.4 m (corsie libere 3.3 m). Scritte di scelta look rimosse dal gioco.
 - Aperti: SM_Shelf_Unit da zero (in coda alla sessione locale, Blender non connesso); scaffali senza prodotti; post-processing look C; bordo cono torcia.

@@ -22,8 +22,8 @@ export const ZONE1 = {
     { id: "door-warehouse", x: 20, z: 0, w: 4, axis: "z", locked: true, label: "Porta magazzino" },
     { id: "door-entrance", x: -15, z: -15, w: 4, axis: "x", locked: true, label: "Ingresso (chiuso)" },
   ] as DoorDef[],
-  /** Scaffali: 8 blocchi schiena contro schiena (largh. 1.3 m), passo 4.4 m => corsie libere di 3.1 m. */
-  shelves: Array.from({ length: 8 }, (_, i): Box => ({ x: -15.4 + i * 4.4, z: 3, w: 1.3, d: 16, h: 2.0 })),
+  /** Scaffali: 8 blocchi schiena contro schiena (largh. 1.1 m), passo 4.4 m => corsie libere di 3.3 m. */
+  shelves: Array.from({ length: 8 }, (_, i): Box => ({ x: -15.4 + i * 4.4, z: 3, w: 1.1, d: 16, h: 2.0 })),
   pillars: [-10, 0, 10].flatMap((x) => [-10, 10].map((z): Box => ({ x, z, w: 0.8, d: 0.8, h: 3.6 }))),
   checkouts: [8, 11, 14, 17].map((x): Box => ({ x: x + 0.5, z: -11, w: 0.9, d: 2.2, h: 1.0 })),
   freezers: Array.from({ length: 6 }, (_, i): Box => ({ x: -16 + i * 5.2, z: 14, w: 4.4, d: 1, h: 2.1 })),
