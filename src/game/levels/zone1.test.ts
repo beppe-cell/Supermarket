@@ -11,6 +11,7 @@ describe("Zone1 data", () => {
     for (const n of ZONE1.neons) expect(inside(n.x, n.z)).toBe(true);
     for (const s of ZONE1.shelves) expect(inside(s.x, s.z)).toBe(true);
     for (const t of ZONE1.trolleys) expect(inside(t.x, t.z)).toBe(true);
+    for (const e of ZONE1.extinguishers) expect(inside(e.x, e.z)).toBe(true);
   });
   it("corsie libere >= 3 m (passaggio)", () => {
     const xs = ZONE1.shelves.map((s) => s.x).sort((a, b) => a - b);

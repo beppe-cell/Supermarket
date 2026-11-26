@@ -8,8 +8,8 @@ import { FixedTimestep } from "./fixed-timestep";
 import { InputManager } from "./input/input-manager";
 import { QUALITY_PROFILES, adaptScaling, detectQuality, profileFor, readDeviceInfo, type QualityId, type QualityProfile } from "./quality";
 import { loadSettings } from "./settings";
-import { buildZone1 } from "../game/levels/zone1-builder";
-import { ZONE1 } from "../game/levels/zone1";
+import { buildZone1, type Movable } from "../game/levels/zone1-builder";
+import { ZONE1, zone1Obstacles } from "../game/levels/zone1";
 import { pickLook } from "../game/levels/look";
 import { Player } from "../game/player/player";
 import { Hud } from "../game/ui/hud";
@@ -123,12 +123,14 @@ export class Game {
         setReload: (v: boolean) => { dbgReload = v; },
         ammo: () => [pistol.mag, pistol.reserve],
         health: () => player.health,
+        carts: () => level.movables.map((m) => [m.kind, +m.slider.x.toFixed(2), +m.slider.z.toFixed(2), +m.slider.yaw.toFixed(2)]),
         toggleInventory: () => inventoryUi?.toggle(),
         paused: () => paused,
       });
     }
 
     const step = new FixedTimestep(1 / 60);
+    const obstacles = zone1Obstacles();
     const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
     let target: Interactable | undefined;
     let interactHeld = false, torchHeld = false, time = 0;
@@ -162,8 +164,17 @@ export class Game {
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {
             if (r.kind === "enemy" && r.enemy && r.part) { const killed = r.enemy.hit(r.part, { sfx, player: player.position }); hud.hitMarker(killed); }
+            const mv = r.mesh?.metadata?.movable as Movable | undefined;
+            if (mv && r.point && r.dir) { mv.hit(r.dir.x, r.dir.z, r.point.x, r.point.z); sfx.rattle(Vector3.Distance(mv.collider.position, player.position)); }
           },
         });
+        // oggetti mobili (carrelli): fisica semplice, ostacoli = muri/scaffali/altri carrelli
+        for (const m of level.movables) {
+          if (!m.moving) continue;
+          const others = level.movables.filter((o) => o !== m).map((o) => ({ x: o.slider.x, z: o.slider.z, w: 0.7, d: 0.7 }));
+          const impact = m.step(dt, [...obstacles, ...others]);
+          if (impact > 0.4) sfx.clank(impact, Vector3.Distance(m.collider.position, player.position));
+        }
         if (!player.alive && !dead) { dead = true; hud.showDeath(); hud.setPrompt(""); document.exitPointerLock?.(); }
         hud.setAmmo(pistol.mag, pistol.reserve, pistol.reloading);
         hud.setHealth(player.health / player.maxHealth, player.health);

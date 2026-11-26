@@ -45,9 +45,21 @@ export const ZONE1 = {
     { kind: "SM_RollCage", x: 13.2, z: 6.0, yaw: 0.3 },
     { kind: "SM_RollCage", x: 13.6, z: 8.8, yaw: -0.5 },
   ] as { kind: "SM_Trolley" | "SM_RollCage"; x: number; z: number; yaw: number }[],
+  /** Estintori a muro (asse a 11 cm dal muro, fronte `yaw`: 0 = +Z, π/2 = +X, π = -Z, -π/2 = -X). */
+  extinguishers: [
+    { x: -3, z: -14.69, yaw: 0 }, { x: 3, z: -14.69, yaw: 0 }, { x: -17, z: -14.69, yaw: 0 },
+    { x: -19.69, z: -8, yaw: Math.PI / 2 }, { x: -19.69, z: 8, yaw: Math.PI / 2 },
+    { x: 19.69, z: 6, yaw: -Math.PI / 2 }, { x: 19.69, z: -9, yaw: -Math.PI / 2 },
+    { x: 10.5, z: -5.74, yaw: 0 }, { x: 15, z: 14.69, yaw: Math.PI },
+  ] as { x: number; z: number; yaw: number }[],
   /** Neon: ogni punto genera una striscia emissiva; alcuni anche luce dinamica. */
   neons: Array.from({ length: 5 }, (_, r) => Array.from({ length: 4 }, (_, c): LightDef => ({ x: -15 + c * 10, z: -10 + r * 6 }))).flat(),
   emergencyLights: [{ x: 19, z: 0 }, { x: -19, z: -14 }, { x: -19, z: 14 }] as LightDef[],
 };
 
 export type Zone1Data = typeof ZONE1;
+
+/** Ostacoli statici (box) per la fisica degli oggetti mobili. */
+export function zone1Obstacles(): { x: number; z: number; w: number; d: number }[] {
+  return [...ZONE1.walls, ...ZONE1.shelves, ...ZONE1.pillars, ...ZONE1.checkouts, ...ZONE1.freezers].map((b) => ({ x: b.x, z: b.z, w: b.w, d: b.d }));
+}

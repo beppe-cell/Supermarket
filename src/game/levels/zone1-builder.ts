@@ -15,6 +15,8 @@ import type { InteractContext, Interactable } from "../interaction/interactable"
 import { ZONE1, type Box } from "./zone1";
 import type { LookPreset } from "./look";
 import { Props } from "./props";
+import { applyHit, createSlider, isMoving, stepSlider, type Box as SBox, type Slider } from "../physics/slider";
+import type { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
@@ -62,9 +64,32 @@ function worldUV(mesh: MeshT, tile: number): void {
 }
 import { Matrix, Quaternion, Vector3 as V3 } from "@babylonjs/core/Maths/math.vector";
 
+/** Oggetto che si muove se colpito (carrello, gabbia a ruote). */
+export class Movable {
+  readonly slider: Slider;
+  constructor(readonly kind: "SM_Trolley" | "SM_RollCage", readonly parts: InstancedMesh[], readonly collider: Mesh, private readonly yawOffset: number, x: number, z: number, yaw: number, mass: number) {
+    this.slider = createSlider(x, z, yaw, 0.45, mass);
+    collider.metadata = { movable: this };
+  }
+  hit(dirX: number, dirZ: number, px: number, pz: number): void {
+    this.collider.unfreezeWorldMatrix(); for (const p of this.parts) p.unfreezeWorldMatrix();
+    applyHit(this.slider, dirX, dirZ, px, pz, this.kind === "SM_Trolley" ? 2.4 : 1.6);
+  }
+  get moving(): boolean { return isMoving(this.slider); }
+  /** Avanza la simulazione e aggiorna mesh e collisione. Ritorna la velocità d'urto (suoni). */
+  step(dt: number, obstacles: readonly SBox[]): number {
+    const impact = stepSlider(this.slider, dt, obstacles, 1.5);
+    const s = this.slider;
+    for (const p of this.parts) Props.pose(p, s.x, s.z, s.yaw);
+    this.collider.position.x = s.x; this.collider.position.z = s.z; this.collider.rotation.y = s.yaw + this.yawOffset;
+    return impact;
+  }
+}
+
 export interface BuiltLevel {
   scene: Scene;
   interactables: Interactable[];
+  movables: Movable[];
   flicker: (t: number) => void;
 }
 
@@ -189,10 +214,11 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     });
   }
 
+  const movables: Movable[] = [];
   // Props reali (se il caricamento fallisce restano i box grigi visibili)
   try {
     const props = await Props.load(scene);
-    placeProps(props, q, scene);
+    movables.push(...placeProps(props, q, scene));
     for (const m of [shelvesBox, checkoutsBox, freezersBox]) if (m) m.isVisible = false; // restano come collisioni
   } catch (e) {
     console.warn("Props non caricati, uso greybox:", e);
@@ -205,11 +231,11 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
       l.intensity = off ? 0.05 : base * (n > 0.92 ? 0.35 : 1);
     }
   };
-  return { scene, interactables, flicker };
+  return { scene, interactables, movables, flicker };
 }
 
 /** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */
-function placeProps(props: Props, q: QualityProfile, scene: Scene): void {
+function placeProps(props: Props, q: QualityProfile, scene: Scene): Movable[] {
   const SHELF_W = 1.2;
   const units: { x: number; z: number; yaw: number }[] = [];
   for (const sh of ZONE1.shelves) {
@@ -224,24 +250,27 @@ function placeProps(props: Props, q: QualityProfile, scene: Scene): void {
     }
   }
   placeProducts(props, units, q.productDensity);
+  const movables: Movable[] = [];
   for (const t of ZONE1.trolleys) {
-    props.spawn(t.kind, t.x, t.z, t.yaw);
-    // collisione semplice (box invisibile) per non attraversare i carrelli
+    const parts = props.spawnAll(t.kind, t.x, t.z, t.yaw, 0, false);
+    // collisione semplice (box invisibile) che segue l'oggetto quando si muove
     const dim = t.kind === "SM_Trolley" ? { w: 0.5, d: 0.9, h: 1 } : { w: 0.66, d: 0.79, h: 1.7 };
     const c = MeshBuilder.CreateBox(`col-${t.kind}-${t.x}`, { width: dim.w, depth: dim.d, height: dim.h }, scene);
-    c.position.set(t.x, dim.h / 2, t.z); c.rotation.y = t.yaw + Math.PI / 2 * (t.kind === "SM_Trolley" ? 1 : 0);
+    const yawOff = t.kind === "SM_Trolley" ? Math.PI / 2 : 0;
+    c.position.set(t.x, dim.h / 2, t.z); c.rotation.y = t.yaw + yawOff;
     c.isVisible = false; c.checkCollisions = true; c.freezeWorldMatrix();
+    for (const p of parts) p.freezeWorldMatrix();
+    movables.push(new Movable(t.kind, parts, c, yawOff, t.x, t.z, t.yaw, t.kind === "SM_Trolley" ? 1 : 1.7));
   }
-  for (const f of ZONE1.freezers) {
-    const n = Math.floor(f.w / 1.6);
-    for (let i = 0; i < n; i++) props.spawn("SM_Fridge", f.x - ((n - 1) * 1.6) / 2 + i * 1.6, f.z - 0.2, Math.PI);
-  }
-  for (const c of ZONE1.checkouts) {
-    props.spawn("SM_Counter", c.x, c.z, Math.PI / 2);
-    props.spawn("SM_Register", c.x, c.z, Math.PI / 2, 0.857);
+  // Estintori a muro con collisione e bersaglio per i proiettili
+  for (const e of ZONE1.extinguishers) {
+    props.spawn("SM_Extinguisher", e.x, e.z, e.yaw, 0.95);
+    const c = MeshBuilder.CreateBox(`col-ext-${e.x}-${e.z}`, { width: 0.2, depth: 0.3, height: 0.66 }, scene);
+    c.position.set(e.x, 0.95 + 0.33, e.z); c.rotation.y = -e.yaw; c.isVisible = false; c.checkCollisions = true; c.freezeWorldMatrix();
   }
   // Scatoloni lungo il muro ovest (posizioni fisse, nessun random)
   [-12, -9, -4, 0, 5, 9, 12].forEach((z, i) => props.spawn(i % 2 ? "SM_Box_Closed" : "SM_Box_Open", -19.3, z, i * 0.4));
+  return movables;
 }
 
 // --- Prodotti sugli scaffali ---------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Scene } from "@babylonjs/core/scene";
 import packUrl from "../../../assets/exported/models/environment/props_pack_clean.glb?url";
+import extUrl from "../../../assets/exported/models/environment/SM_Extinguisher.glb?url";
 import shelfUrl from "../../../assets/exported/models/environment/SM_Shelf_Unit.glb?url";
 import productsUrl from "../../../assets/exported/models/environment/SM_Products.glb?url";
 import trolleyUrl from "../../../assets/exported/models/environment/SM_Trolley.glb?url";
@@ -12,7 +13,7 @@ import cageUrl from "../../../assets/exported/models/environment/SM_RollCage.glb
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import "@babylonjs/core/Meshes/thinInstanceMesh";
 
-const FILES: Record<string, string> = { props_pack_clean: packUrl, SM_Shelf_Unit: shelfUrl, SM_Products: productsUrl, SM_Trolley: trolleyUrl, SM_RollCage: cageUrl };
+const FILES: Record<string, string> = { props_pack_clean: packUrl, SM_Shelf_Unit: shelfUrl, SM_Products: productsUrl, SM_Trolley: trolleyUrl, SM_RollCage: cageUrl, SM_Extinguisher: extUrl };
 
 /** In modalità `artifact` (hosting senza file .glb) i modelli sono pubblicati come base64 in .txt. */
 async function source(key: string): Promise<string | Uint8Array> {
@@ -60,22 +61,26 @@ export class Props {
 
   has(name: string): boolean { return this.sources.has(name) || this.groups.has(name); }
 
-  /** Istanza con base a terra in (x, z), rotazione `yaw` (rad, mondo). */
-  spawn(name: string, x: number, z: number, yaw = 0, y = 0): InstancedMesh | undefined {
+  /** Istanze (una per primitiva del modello) con base a terra in (x, z), rotazione `yaw` (rad, mondo). `frozen=false` per oggetti che si muovono. */
+  spawnAll(name: string, x: number, z: number, yaw = 0, y = 0, frozen = true): InstancedMesh[] {
     const parts = this.groups.get(name) ?? (this.sources.has(name) ? [this.sources.get(name) as Mesh] : []);
-    let first: InstancedMesh | undefined;
+    const out: InstancedMesh[] = [];
     for (const src of parts) {
       if (src.getTotalVertices() === 0) continue;
       const inst = src.createInstance(`${name}@${x.toFixed(1)},${z.toFixed(1)}`);
-      // Le istanze ereditano il nodo radice glTF (mano destra->sinistra = specchio su X): si compensa X e il segno dell'angolo.
-      inst.position.set(-x, y, z);
       inst.rotationQuaternion = null; // i mesh glTF usano il quaternione, che nasconderebbe `rotation`
-      inst.rotation.y = -yaw;
-      inst.freezeWorldMatrix();
-      first ??= inst;
+      Props.pose(inst, x, z, yaw, y);
+      if (frozen) inst.freezeWorldMatrix();
+      out.push(inst);
     }
-    return first;
+    return out;
   }
+
+  /** Le istanze ereditano il nodo radice glTF (mano destra->sinistra = specchio su X): si compensa X e il segno dell'angolo. */
+  static pose(inst: InstancedMesh, x: number, z: number, yaw: number, y = 0): void { inst.position.set(-x, y, z); inst.rotation.y = -yaw; }
+
+  /** Compatibilità: prima istanza. */
+  spawn(name: string, x: number, z: number, yaw = 0, y = 0): InstancedMesh | undefined { return this.spawnAll(name, x, z, yaw, y)[0]; }
 
   /** Matrice mondo di un'istanza `spawn` (stessa convenzione: X invertita, angolo negato). */
   static unitMatrix(x: number, z: number, yaw: number): Matrix {

@@ -57,6 +57,16 @@ export class Sfx {
   }
   /** Colpo andato a segno su un bersaglio metallico: ping. */
   metalHit(pan = 0): void { const o = this.out(); if (!o) return; this.tone("triangle", 1900, 1200, 0.18, 0.35, o, pan); this.noise(0.08, "bandpass", 3500, 2500, 0.4, o, pan); }
+  /** Carrello colpito: fracasso metallico di tubi e ruote. */
+  rattle(dist: number): void {
+    const o = this.out(); if (!o) return; const v = Math.max(0.15, 1 - dist / 25);
+    this.noise(0.35, "bandpass", 3200, 1800, 0.5 * v, o); this.tone("triangle", 2300, 900, 0.22, 0.25 * v, o); this.tone("triangle", 1500, 700, 0.3, 0.2 * v, o, 0, 0.05); this.noise(0.5, "bandpass", 900, 500, 0.18 * v, o, 0, 0.08);
+  }
+  /** Urto di un oggetto mobile contro muro/scaffale; `speed` in m/s. */
+  clank(speed: number, dist: number): void {
+    const o = this.out(); if (!o) return; const v = Math.min(1, speed / 3) * Math.max(0.1, 1 - dist / 22); if (v < 0.05) return;
+    this.tone("square", 220, 90, 0.12, 0.35 * v, o); this.noise(0.14, "bandpass", 1500, 600, 0.45 * v, o);
+  }
   impact(): void { const o = this.out(); if (o) this.noise(0.08, "lowpass", 1800, 300, 0.4, o); }
   /** Passo metallico di un nemico con attenuazione per distanza e panning. */
   step(dist: number, pan: number): void {

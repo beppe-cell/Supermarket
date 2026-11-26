@@ -14,7 +14,11 @@ export const MAG_SIZE = 15;
 const FIRE_INTERVAL = 0.17, RELOAD_TIME = 1.7, RANGE = 80;
 const MUZZLE = new Vector3(0, 0.07, 0.19); // dal JSON di prep_weapon (coordinate glTF)
 
-export interface HitReport { kind: "none" | "world" | "enemy"; part?: HitPart; killed?: boolean; enemy?: Damageable }
+export interface HitReport {
+  kind: "none" | "world" | "enemy"; part?: HitPart; killed?: boolean; enemy?: Damageable;
+  /** Per colpi sul mondo: mesh colpito, punto e direzione del proiettile (per far muovere i carrelli). */
+  mesh?: AbstractMesh; point?: Vector3; dir?: Vector3;
+}
 
 /** Pistola in prima persona (Beretta M9): viewmodel con sway/rinculo, ricarica, hitscan con dispersione, effetti e suoni. */
 export class Pistol {
@@ -105,7 +109,7 @@ export class Pistol {
         hooks.onReport({ kind: "enemy", part, enemy });
       } else {
         const n = hit.getNormal(true, true) ?? dir.scale(-1);
-        this.fx.impactWorld(p, n); this.sfx.impact(); hooks.onReport({ kind: "world" });
+        this.fx.impactWorld(p, n); this.sfx.impact(); hooks.onReport({ kind: "world", mesh: hit.pickedMesh ?? undefined, point: p.clone(), dir: dir.clone() });
       }
     } else { this.fx.tracer(muzzle, origin.add(dir.scale(40))); hooks.onReport({ kind: "none" }); }
   }

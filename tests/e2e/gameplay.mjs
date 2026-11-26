@@ -43,6 +43,14 @@ await page.waitForTimeout(500);
 await page.keyboard.press("KeyE"); await page.waitForTimeout(300);
 const inv = await page.evaluate(() => window.__dbg.inventory());
 check("raccoglie oggetto con E", inv.includes("batteries"), JSON.stringify(inv));
+// carrello colpito da un proiettile: si deve muovere
+await page.evaluate(() => { window.__dbg.teleport(4.4, -3.6); window.__dbg.look(0, Math.atan2(1.65 - 0.5, 3.0)); });
+await page.waitForTimeout(400);
+const c0 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] - 4.4) < 0.3);
+await page.evaluate(() => window.__dbg.setFire(true)); await page.waitForTimeout(300); await page.evaluate(() => window.__dbg.setFire(false));
+await page.waitForFunction((z0) => window.__dbg.carts().some((c) => c[0] === "SM_Trolley" && c[2] - z0 > 0.4), c0[2], { timeout: 40000 }).catch(() => {});
+const c1 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] - 4.4) < 1.5);
+check("carrello colpito si muove", c1[2] - c0[2] > 0.4, `z ${c0[2]} -> ${c1[2]}`);
 check("nessun errore console", errors.length === 0, JSON.stringify(errors));
 await page.screenshot({ path: "tests/e2e/out-gameplay.png" });
 await browser.close();
