@@ -102,7 +102,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   const b = ZONE1.bounds;
   const W = b.maxX - b.minX, D = b.maxZ - b.minZ;
   const floor = MeshBuilder.CreateGround("floor", { width: W, height: D }, scene);
-  floor.material = floorM; floor.checkCollisions = true; worldUV(floor, 2);
+  floor.material = floorM; floor.checkCollisions = true; worldUV(floor, 3);
   const ceiling = MeshBuilder.CreateGround("ceiling", { width: W, height: D }, scene);
   ceiling.position.y = ZONE1.ceiling; ceiling.rotation.x = Math.PI; ceiling.material = ceilM; worldUV(ceiling, 1.2);
 

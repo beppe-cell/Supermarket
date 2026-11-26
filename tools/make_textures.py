@@ -1,5 +1,5 @@
 """Texture PBR ripetibili per l'ambiente (look C: grigi freddi, sporco, usura), generate proceduralmente.
-Output in <out>/: <name>_albedo.jpg, <name>_normal.png (OpenGL, Y+), <name>_orm.jpg (R=AO, G=roughness, B=metallic).
+Output in <out>/ (pareti e soffitto; il pavimento è in convert_floor_texture.py): <name>_albedo.jpg, <name>_normal.png (OpenGL, Y+), <name>_orm.jpg (R=AO, G=roughness, B=metallic).
 Uso: python3 tools/make_textures.py <out_dir>"""
 import sys, os
 import numpy as np
@@ -38,22 +38,7 @@ def tiles_mask(n, count, grout):
     idx = (y // cell).astype(int) * count + (x // cell).astype(int)
     return inner.astype(float), idx
 
-# --- Pavimento: piastrelle in vinile 0.5 m (4x4 in 2 m), grigio freddo, sporco e graffi -------------------------
-n = 1024
-inner, idx = tiles_mask(n, 4, 0.025)
-tone = (rng.random(16) - 0.5) * 0.06
-base = 0.40 + tone[idx]
-grime = pnoise(n, 2.4, 1)
-scuff = pnoise(n, 1.2, 2)
-alb = base * (0.80 + 0.35 * grime) * (0.92 + 0.12 * scuff)
-alb = np.where(inner > 0.5, alb, 0.12 + 0.05 * grime)  # fughe scure
-stain = np.clip((pnoise(n, 3.0, 3) - 0.82) * 3, 0, 1) * 0.3  # macchie scure rarefatte
-alb = alb * (1 - stain)
-col = np.stack([alb * 0.93, alb * 0.97, alb * 1.03], -1)  # tinta fredda
-height = inner * 0.5 + 0.35 * scuff + 0.15 * grime
-rough = 0.38 + 0.38 * grime + 0.15 * (1 - inner) - 0.1 * (1 - scuff)  # più lucido dove pulito
-ao = 0.55 + 0.45 * inner
-save("floor", col, height, rough, ao, 0.0, 5.0)
+# Pavimento: texture scaricata, convertita con tools/convert_floor_texture.py (vedi ASSET_REGISTRY T07)
 
 # --- Pareti: intonaco sporco, 2 m ripetibile --------------------------------------------------------------------
 n = 512
