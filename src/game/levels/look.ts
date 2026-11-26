@@ -40,5 +40,5 @@ export const LOOKS: Record<LookPreset["id"], LookPreset> = {
 };
 
 export function pickLook(id: string | null): LookPreset {
-  return LOOKS[(id === "b" || id === "c" ? id : "a") as LookPreset["id"]];
+  return LOOKS[(id === "a" || id === "b" ? id : "c") as LookPreset["id"]];
 }

@@ -3,6 +3,9 @@
 ## Stile
 Realistico cinematografico, orrore realistico quotidiano. Materiali PBR credibili (piastrelle sporche, metallo ossidato, plastica), dettaglio mid-poly con normal map da sculpt.
 
+## Look approvato
+Look C (decisione 0002): grigio freddo, neon bianco gelido, accenti rossi diffusi.
+
 ## Palette
 Base: grigio freddo desaturato (pareti, pavimenti, acciaio). Accento: rosso sangue (sangue, luci d'emergenza, segnaletica). Neon fluorescenti bianco-verdastri freddi come luce quotidiana corrotta. Regola: il rosso è raro, quindi sempre significativo.
 

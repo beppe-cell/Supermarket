@@ -1,6 +1,4 @@
-# 0002 — Look: proposte in attesa di scelta (Art Director)
-Varianti nel codice (`src/game/levels/look.ts`), selezionabili con `?look=a|b|c` o `#a|#b|#c`:
-- A: Clinico freddo (neon verde-bianco, rosso raro)
-- B: Quasi blackout (torcia protagonista, emergenza rossa)
-- C: Grigio freddo e sangue (neon bianco gelido, accenti rossi diffusi)
-Stato: NESSUNA scelta fatta. Decisione = Art Director.
+# 0002 — Look approvato: C "Grigio freddo e sangue" (Art Director, 2026-11-26)
+Scelta: Look C — neon bianco gelido, grigi freddi, accenti rossi diffusi (luci d'emergenza).
+Varianti A e B restano nel codice come riferimento (`?look=a|b`), il default è C.
+Da rifinire con i materiali veri (M2): bordo del cono torcia, sporco/sangue come decal, grana e vignettatura.
