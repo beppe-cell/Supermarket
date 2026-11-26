@@ -46,7 +46,12 @@ export class Props {
           if (g?.[1]) { const list = groups.get(g[1]) ?? []; list.push(mesh); groups.set(g[1], list); }
         }
       }
-      for (const mat of container.materials) (mat as PBRMaterial).maxSimultaneousLights = 6;
+      for (const mat of container.materials) {
+        const pbr = mat as PBRMaterial;
+        pbr.maxSimultaneousLights = 6;
+        // Senza mappa ambiente il metallo puro appare nero: finché non ci sono i riflessi si attenua il fattore metallico.
+        if (key === "SM_Shelf_Unit") pbr.metallic = 0.35;
+      }
     }
     const lod = sources.get("SM_Shelf_Unit_LOD1"), high = sources.get("SM_Shelf_Unit");
     if (lod && high) high.addLODLevel(14, lod);

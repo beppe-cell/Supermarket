@@ -1,5 +1,5 @@
 """Texture PBR ripetibili per l'ambiente (look C: grigi freddi, sporco, usura), generate proceduralmente.
-Output in <out>/ (pareti e soffitto; il pavimento è in convert_floor_texture.py): <name>_albedo.jpg, <name>_normal.png (OpenGL, Y+), <name>_orm.jpg (R=AO, G=roughness, B=metallic).
+Output in <out>/ (solo soffitto; pavimento/pareti/metallo: convert_*_texture.py): <name>_albedo.jpg, <name>_normal.png (OpenGL, Y+), <name>_orm.jpg (R=AO, G=roughness, B=metallic).
 Uso: python3 tools/make_textures.py <out_dir>"""
 import sys, os
 import numpy as np
@@ -40,18 +40,7 @@ def tiles_mask(n, count, grout):
 
 # Pavimento: texture scaricata, convertita con tools/convert_floor_texture.py (vedi ASSET_REGISTRY T07)
 
-# --- Pareti: intonaco sporco, 2 m ripetibile --------------------------------------------------------------------
-n = 512
-n1, n2, n3 = pnoise(n, 2.2, 11), pnoise(n, 3.2, 12), pnoise(n, 1.6, 13)
-alb = 0.52 + 0.14 * (n1 - 0.5) + 0.06 * (n3 - 0.5)
-streak = pnoise(n, 3.4, 14)
-streaks = np.clip((np.roll(streak, 0, 0) - 0.6) * 2.2, 0, 1) * 0.25
-alb = alb * (1 - streaks)
-col = np.stack([alb * 0.95, alb * 0.98, alb * 1.02], -1)
-height = 0.5 * n2 + 0.5 * n3
-rough = 0.72 + 0.2 * n1
-ao = 0.8 + 0.2 * n2
-save("wall", col, height, rough, ao, 0.0, 3.0)
+# Pareti e metallo scaffali: set scaricati, vedi tools/convert_wall_metal_textures.py (ASSET_REGISTRY T08/T09)
 
 # --- Soffitto: pannelli 0.6 m (2x2 in 1.2 m) con profilo a T ------------------------------------------------
 n = 512

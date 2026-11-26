@@ -1,5 +1,5 @@
 """Genera SM_Shelf_Unit (scaffale gondola da supermercato, ~1.2 x 0.5 x 1.9 m) con bevel, materiali PBR e texture
-baked (sporco/usura). Fronte verso -Y (Blender). Uso: python tools/make_shelf.py <out.glb> [texture_dir]"""
+baked (sporco/usura). Fronte verso -Y (Blender). Uso: SHELF_TEX_DIR=<dir con shelf_albedo.jpg/shelf_orm.jpg/shelf_normal.png> python tools/make_shelf.py <out.glb>"""
 import bpy, bmesh, sys, math, os
 from mathutils import Vector
 
@@ -74,33 +74,27 @@ me = shelf.data
 for v in me.vertices: v.co.z -= 0.0
 shelf.location = (0, 0, 0)
 
-# UV + bake sporco/usura su un'unica texture 1024 (base color), poi materiale glTF-compatibile
+# UV a scala reale (cube projection: 1 tile = 0.8 m) + materiale acciaio zincato dalle texture scaricate
 bpy.ops.object.mode_set(mode="EDIT"); bpy.ops.mesh.select_all(action="SELECT")
-bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004); bpy.ops.object.mode_set(mode="OBJECT")
-sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = 8
-img = bpy.data.images.new("T_Shelf_BaseColor", 1024, 1024)
-tm = bpy.data.materials.new("M_Shelf"); tm.use_nodes = True
-nt = tm.node_tree; pb = nt.nodes["Principled BSDF"]
-# grime: gradiente verso il basso + rumore + usura sui bordi (AO inverso)
-tc = nt.nodes.new("ShaderNodeTexCoord"); sep = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(tc.outputs["Object"], sep.inputs[0])
-ramp = nt.nodes.new("ShaderNodeMapRange"); ramp.inputs[1].default_value = 0.0; ramp.inputs[2].default_value = 1.1; ramp.inputs[3].default_value = 1.0; ramp.inputs[4].default_value = 0.0
-nt.links.new(sep.outputs["Z"], ramp.inputs[0])
-noi = nt.nodes.new("ShaderNodeTexNoise"); noi.inputs["Scale"].default_value = 14; noi.inputs["Detail"].default_value = 8
-nt.links.new(tc.outputs["Object"], noi.inputs["Vector"])
-mulg = nt.nodes.new("ShaderNodeMath"); mulg.operation = "MULTIPLY"; nt.links.new(ramp.outputs[0], mulg.inputs[0]); nt.links.new(noi.outputs["Fac"], mulg.inputs[1])
-mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"
-mix.inputs[6].default_value = (0.66, 0.69, 0.72, 1); mix.inputs[7].default_value = (0.16, 0.15, 0.14, 1)
-nt.links.new(mulg.outputs[0], mix.inputs[0]); nt.links.new(mix.outputs[2], pb.inputs["Base Color"])
-pb.inputs["Metallic"].default_value = 0.5; pb.inputs["Roughness"].default_value = 0.5
-tex = nt.nodes.new("ShaderNodeTexImage"); tex.image = img; nt.nodes.active = tex
-shelf.data.materials.clear(); shelf.data.materials.append(tm)
-bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, margin=6)
-# materiale finale: texture baked + metal/roughness medi (glTF PBR)
-tm2 = bpy.data.materials.new("M_Shelf_Final"); tm2.use_nodes = True
-n2 = tm2.node_tree; p2 = n2.nodes["Principled BSDF"]; t2 = n2.nodes.new("ShaderNodeTexImage"); t2.image = img
-n2.links.new(t2.outputs["Color"], p2.inputs["Base Color"]); p2.inputs["Metallic"].default_value = 0.2; p2.inputs["Roughness"].default_value = 0.5
-shelf.data.materials.clear(); shelf.data.materials.append(tm2)
-img.filepath_raw = os.path.join(tex_dir, "T_Shelf_BaseColor.png"); img.file_format = "PNG"; img.save()
+bpy.ops.uv.cube_project(cube_size=0.8, correct_aspect=True, clip_to_bounds=False, scale_to_bounds=False); bpy.ops.object.mode_set(mode="OBJECT")
+TEX = os.environ.get("SHELF_TEX_DIR", tex_dir)
+def img(name, cs):
+    i = bpy.data.images.load(os.path.join(TEX, name)); i.colorspace_settings.name = cs; i.pack(); return i
+steel = bpy.data.materials.new("M_ShelfSteel"); steel.use_nodes = True
+nt = steel.node_tree; pb = nt.nodes["Principled BSDF"]
+tb = nt.nodes.new("ShaderNodeTexImage"); tb.image = img("shelf_albedo.jpg", "sRGB")
+to = nt.nodes.new("ShaderNodeTexImage"); to.image = img("shelf_orm.jpg", "Non-Color")
+tn = nt.nodes.new("ShaderNodeTexImage"); tn.image = img("shelf_normal.png", "Non-Color")
+sep = nt.nodes.new("ShaderNodeSeparateColor"); nm = nt.nodes.new("ShaderNodeNormalMap")
+nt.links.new(tb.outputs["Color"], pb.inputs["Base Color"])
+nt.links.new(to.outputs["Color"], sep.inputs["Color"])
+nt.links.new(sep.outputs["Green"], pb.inputs["Roughness"]); nt.links.new(sep.outputs["Blue"], pb.inputs["Metallic"])
+nt.links.new(tn.outputs["Color"], nm.inputs["Color"]); nt.links.new(nm.outputs["Normal"], pb.inputs["Normal"])
+# materiali per faccia: etichette prezzo = materiale label (indice 1), il resto acciaio (indice 0)
+names = [m.name for m in shelf.data.materials]
+for poly in shelf.data.polygons:
+    poly.material_index = 1 if names[poly.material_index] == "M_PriceLabel" else 0
+shelf.data.materials.clear(); shelf.data.materials.append(steel); shelf.data.materials.append(lab)
 # LOD1 (distanza): copia decimata ~0.3
 bpy.ops.object.select_all(action="DESELECT"); shelf.select_set(True); bpy.context.view_layer.objects.active = shelf
 bpy.ops.object.duplicate(); lod = bpy.context.active_object; lod.name = "SM_Shelf_Unit_LOD1"
