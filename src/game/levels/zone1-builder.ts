@@ -13,6 +13,7 @@ import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import type { QualityProfile } from "../../core/quality";
 import type { InteractContext, Interactable } from "../interaction/interactable";
 import { ZONE1, type Box } from "./zone1";
+import type { LookPreset } from "./look";
 
 export interface BuiltLevel {
   scene: Scene;
@@ -29,26 +30,26 @@ function mat(scene: Scene, name: string, hex: string, emissive = false): Standar
 }
 
 /** Costruisce Z1 in greybox: geometria statica unita per materiale (poche draw call), collisioni attive. */
-export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile): BuiltLevel {
+export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, look: LookPreset): BuiltLevel {
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.02, 0.025, 0.03, 1);
+  scene.clearColor = new Color4(look.clear[0], look.clear[1], look.clear[2], 1);
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogDensity = q.volumetricFog ? 0.035 : 0.025;
-  scene.fogColor = new Color3(0.03, 0.04, 0.045);
+  scene.fogDensity = look.fogDensity * (q.volumetricFog ? 1.3 : 1);
+  scene.fogColor = new Color3(...look.fogColor);
   scene.collisionsEnabled = true;
 
   const amb = new HemisphericLight("amb", new Vector3(0, 1, 0), scene);
-  amb.intensity = 0.3;
-  amb.diffuse = new Color3(0.6, 0.72, 0.78);
+  amb.intensity = look.ambient;
+  amb.diffuse = new Color3(...look.ambientDiffuse);
   amb.groundColor = new Color3(0.08, 0.09, 0.1);
 
-  const floorM = mat(scene, "floor", "#3a3f43");
-  const wallM = mat(scene, "wall", "#5d6468");
-  const shelfM = mat(scene, "shelf", "#6c7378");
+  const floorM = mat(scene, "floor", look.floor);
+  const wallM = mat(scene, "wall", look.wall);
+  const shelfM = mat(scene, "shelf", look.shelf);
   const counterM = mat(scene, "counter", "#4a5055");
   const freezerM = mat(scene, "freezer", "#7d8a92");
-  const ceilM = mat(scene, "ceiling", "#2c3033");
-  const neonM = mat(scene, "neon", "#d8f3e6", true);
+  const ceilM = mat(scene, "ceiling", look.ceiling);
+  const neonM = mat(scene, "neon", look.neonColor, true);
   const emergM = mat(scene, "emerg", "#ff2a2a", true);
 
   const b = ZONE1.bounds;
@@ -88,14 +89,19 @@ export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile): Bu
   const lightSpots = ZONE1.neons.filter((_, i) => i % 3 === 0).slice(0, budget);
   lightSpots.forEach((n, i) => {
     const l = new PointLight(`nl${i}`, new Vector3(n.x, ZONE1.ceiling - 0.4, n.z), scene);
-    l.diffuse = new Color3(0.78, 0.95, 0.88); l.intensity = 0.55; l.range = 14;
-    lights.push({ l, base: 0.55, seed: i * 17.3 });
+    l.diffuse = new Color3(...look.neonLightColor); l.intensity = look.neonIntensity; l.range = 14;
+    lights.push({ l, base: look.neonIntensity, seed: i * 17.3 });
   });
 
   const emerg = ZONE1.emergencyLights.map((e, i) => {
     const s = MeshBuilder.CreateBox(`em${i}`, { width: 0.3, height: 0.3, depth: 0.3 }, scene);
     s.position.set(e.x, 2.8, e.z);
     return s;
+  });
+  const emBudget = Math.max(0, q.maxDynamicLights - 1 - lightSpots.length);
+  ZONE1.emergencyLights.slice(0, Math.max(emBudget, q.maxDynamicLights > 1 ? 1 : 0)).forEach((e, i) => {
+    const l = new PointLight(`el${i}`, new Vector3(e.x, 2.6, e.z), scene);
+    l.diffuse = new Color3(1, 0.12, 0.1); l.intensity = look.emergencyIntensity; l.range = 11;
   });
   const emMerged = Mesh.MergeMeshes(emerg, true, true);
   if (emMerged) { emMerged.material = emergM; emMerged.freezeWorldMatrix(); }

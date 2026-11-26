@@ -25,7 +25,7 @@ export class Player {
   private vy = 0;
   private readonly move = new Vector3();
 
-  constructor(scene: Scene, spawn: { x: number; z: number; yaw: number }) {
+  constructor(scene: Scene, spawn: { x: number; z: number; yaw: number }, torchIntensity = 1.6) {
     this.yaw = spawn.yaw;
     this.body = MeshBuilder.CreateBox("player-body", { width: 0.6, depth: 0.6, height: 1.8 }, scene);
     this.body.isVisible = false;
@@ -39,9 +39,10 @@ export class Player {
     this.camera.inputs.clear();
     scene.activeCamera = this.camera;
 
-    this.torch = new SpotLight("torch", Vector3.Zero(), new Vector3(0, 0, 1), 1.2, 2, scene);
+    this.torch = new SpotLight("torch", Vector3.Zero(), new Vector3(0, 0, 1), 1.7, 1, scene);
+    this.torch.innerAngle = 0.4;
     this.torch.diffuse = new Color3(1, 0.96, 0.86);
-    this.torch.intensity = 1.6;
+    this.torch.intensity = torchIntensity;
     this.torch.range = 22;
     this.torch.parent = this.camera;
   }

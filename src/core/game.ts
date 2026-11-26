@@ -8,6 +8,7 @@ import { InputManager } from "./input/input-manager";
 import { QUALITY_PROFILES, adaptScaling, detectQuality, readDeviceInfo, type QualityId, type QualityProfile } from "./quality";
 import { buildZone1 } from "../game/levels/zone1-builder";
 import { ZONE1 } from "../game/levels/zone1";
+import { pickLook } from "../game/levels/look";
 import { Player } from "../game/player/player";
 import { Hud } from "../game/ui/hud";
 import type { Interactable } from "../game/interaction/interactable";
@@ -33,9 +34,10 @@ export class Game {
     this.engine.setHardwareScalingLevel(this.quality.hardwareScaling);
 
     this.input = new InputManager(this.canvas, dev.isTouch);
-    const level = buildZone1(this.engine, this.quality);
+    const look = pickLook(params.get("look") ?? location.hash.slice(1));
+    const level = buildZone1(this.engine, this.quality, look);
     const scene = level.scene;
-    const player = new Player(scene, ZONE1.spawn);
+    const player = new Player(scene, ZONE1.spawn, look.torchIntensity);
     const hud = new Hud();
     const step = new FixedTimestep(1 / 60);
 
@@ -47,7 +49,7 @@ export class Game {
       addItem: (id: string, label: string) => { this.inventory.set(id, label); hud.setInventory([...this.inventory.values()]); },
       message: (t: string) => hud.message(t),
     };
-    hud.message("Cerca una chiave per il magazzino.");
+    hud.message(`Look ${look.name}`);
 
     const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
     let target: Interactable | undefined;

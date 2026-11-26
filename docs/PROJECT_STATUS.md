@@ -1,5 +1,5 @@
 # Stato progetto
-- Fase corrente: 8 — M1 completata; prossimo M2 (look + asset)
+- Fase corrente: 8 — M2 in corso: 3 varianti di look in attesa di scelta Art Director; asset SM_Shelf_Unit in attesa (Blender non connesso)
 - Framework: creato (Fase 5)
 - Gioco: sviluppo avviato (documenti approvati 2026-11-25)
 ## Decisioni approvate
