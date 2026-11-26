@@ -33,6 +33,8 @@ export const ZONE1 = {
     { id: "can-1", x: -8.8, y: 1.2, z: 6, label: "Lattina di cibo" },
     { id: "bat-1", x: 4.4, y: 1.2, z: -4, label: "Batterie" },
     { id: "alc-1", x: 8.8, y: 1.2, z: 3, label: "Alcol" },
+    { id: "ammo-1", x: -6.2, y: 0.9, z: -11.6, label: "Munizioni 9 mm" },
+    { id: "ammo-2", x: 12.2, y: 0.9, z: 12.2, label: "Munizioni 9 mm" },
   ] as PickupDef[],
   /** Carrelli: `kind` = SM_Trolley (carrello spesa) o SM_RollCage (gabbia a ruote). */
   trolleys: [

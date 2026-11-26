@@ -32,6 +32,7 @@ export class KeyboardMouseInput implements InputSource {
     out.fire ||= this.firing;
     out.interact ||= k.has("KeyE");
     out.torch ||= k.has("KeyF");
+    out.reload ||= k.has("KeyR");
   }
 
   dispose(): void { this.abort.abort(); }

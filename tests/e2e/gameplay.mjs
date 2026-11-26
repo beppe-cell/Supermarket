@@ -42,7 +42,7 @@ await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
 await page.waitForTimeout(500);
 await page.keyboard.press("KeyE"); await page.waitForTimeout(300);
 const inv = await page.evaluate(() => window.__dbg.inventory());
-check("raccoglie oggetto con E", inv.includes("bat-1"), JSON.stringify(inv));
+check("raccoglie oggetto con E", inv.includes("batteries"), JSON.stringify(inv));
 check("nessun errore console", errors.length === 0, JSON.stringify(errors));
 await page.screenshot({ path: "tests/e2e/out-gameplay.png" });
 await browser.close();

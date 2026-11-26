@@ -17,6 +17,10 @@ const SENS = 0.0022, GRAVITY = 9.8;
 export class Player {
   readonly camera: FreeCamera;
   readonly stamina = new Stamina();
+  health = 100;
+  readonly maxHealth = 100;
+  private recoilPitch = 0;
+  private recoilYaw = 0;
   readonly torch: SpotLight;
   private readonly body: Mesh;
   private yaw = 0;
@@ -47,8 +51,15 @@ export class Player {
     this.torch.parent = this.camera;
   }
 
+  get alive(): boolean { return this.health > 0; }
+  heal(n: number): void { this.health = Math.min(this.maxHealth, this.health + n); }
+  damage(n: number): void { this.health = Math.max(0, this.health - n); }
+  /** Rinculo visivo: sposta la mira e rientra da solo. */
+  addRecoil(pitch: number, yaw: number): void { this.recoilPitch += pitch; this.recoilYaw += yaw; }
+
   get position(): Vector3 { return this.camera.position; }
   get yawAngle(): number { return this.yaw; }
+  get isCrouching(): boolean { return this.eye < 1.4; }
 
   teleport(x: number, z: number): void {
     this.body.position.set(x, 0.9, z);
@@ -65,7 +76,8 @@ export class Player {
   update(input: InputState, dt: number): { moving: boolean; sprinting: boolean } {
     this.yaw += input.lookDX * SENS;
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + input.lookDY * SENS));
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.recoilPitch *= Math.max(0, 1 - dt * 9); this.recoilYaw *= Math.max(0, 1 - dt * 9);
+    this.camera.rotation.set(this.pitch - this.recoilPitch, this.yaw + this.recoilYaw, 0);
 
     const moving = input.moveX !== 0 || input.moveY !== 0;
     const crouching = input.crouch;

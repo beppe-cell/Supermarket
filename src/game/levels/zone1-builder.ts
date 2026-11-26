@@ -167,7 +167,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
       prompt: () => (locked ? `${d.label} — bloccata` : open ? `Chiudi ${d.label}` : `Apri ${d.label}`),
       interact: (ctx: InteractContext) => {
         if (locked) {
-          if (d.id === "door-warehouse" && ctx.hasItem("key-warehouse")) { locked = false; ctx.message("Hai sbloccato la porta del magazzino."); }
+          if (d.id === "door-warehouse" && ctx.hasItem("key-warehouse")) { locked = false; ctx.message("Hai sbloccato la porta del magazzino."); ctx.event("warehouse_unlocked"); }
           else { ctx.message(d.id === "door-entrance" ? "L'ingresso è sbarrato dall'esterno." : "Serve una chiave."); return; }
         }
         open = !open;
@@ -185,7 +185,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     interactables.push({
       mesh: m,
       prompt: () => `Raccogli ${p.label}`,
-      interact: (ctx) => { ctx.addItem(p.id, p.label); ctx.message(`Raccolto: ${p.label}`); m.dispose(); interactables.splice(interactables.findIndex((i) => i.mesh === m), 1); },
+      interact: (ctx) => { if (!ctx.addItem(p.id, p.label)) return; m.dispose(); interactables.splice(interactables.findIndex((i) => i.mesh === m), 1); },
     });
   }
 

@@ -9,10 +9,11 @@ export interface InputState {
   fire: boolean;
   interact: boolean;
   torch: boolean;
+  reload: boolean;
 }
 
 export function createInputState(): InputState {
-  return { moveX: 0, moveY: 0, lookDX: 0, lookDY: 0, sprint: false, crouch: false, fire: false, interact: false, torch: false };
+  return { moveX: 0, moveY: 0, lookDX: 0, lookDY: 0, sprint: false, crouch: false, fire: false, interact: false, torch: false, reload: false };
 }
 
 export interface InputSource {
