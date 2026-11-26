@@ -15,6 +15,7 @@ import type { InteractContext, Interactable } from "../interaction/interactable"
 import { ZONE1, type Box } from "./zone1";
 import type { LookPreset } from "./look";
 import { Props } from "./props";
+import { buildDecor } from "./decor";
 import { applyHit, createSlider, isMoving, stepSlider, type Box as SBox, type Slider } from "../physics/slider";
 import type { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -145,8 +146,8 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   boxes(ZONE1.walls, "walls", wallM);
   const shelvesBox = boxes(ZONE1.shelves, "shelves", shelfM);
   boxes(ZONE1.pillars, "pillars", wallM);
-  const checkoutsBox = boxes(ZONE1.checkouts, "checkouts", counterM);
-  const freezersBox = boxes(ZONE1.freezers, "freezers", freezerM);
+  boxes(ZONE1.checkouts, "checkouts", counterM);
+  boxes(ZONE1.freezers, "freezers", freezerM);
 
   // Neon (strisce emissive unite) + luci dinamiche limitate dal profilo
   const strips = ZONE1.neons.map((n, i) => {
@@ -221,10 +222,12 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   try {
     const props = await Props.load(scene);
     movables.push(...placeProps(props, q, scene));
-    for (const m of [shelvesBox, checkoutsBox, freezersBox]) if (m) m.isVisible = false; // restano come collisioni
+    if (shelvesBox) shelvesBox.isVisible = false; // restano come collisioni; casse e frigoriferi restano visibili (texture Gemini)
   } catch (e) {
     console.warn("Props non caricati, uso greybox:", e);
   }
+
+  try { buildDecor(scene); } catch (e) { console.warn("Decor non costruito:", e); }
 
   const flicker = (t: number) => {
     for (const { l, base, seed } of lights) {
