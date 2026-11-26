@@ -12,6 +12,8 @@ import { ZONE1 } from "../game/levels/zone1";
 import { pickLook } from "../game/levels/look";
 import { Player } from "../game/player/player";
 import { Hud } from "../game/ui/hud";
+import { createEnvironment } from "./environment";
+import { createPostFx } from "./postfx";
 import type { Interactable } from "../game/interaction/interactable";
 
 const REACH = 2.4;
@@ -40,7 +42,10 @@ export class Game {
     const look = pickLook(params.get("look") ?? location.hash.slice(1));
     const level = await buildZone1(this.engine, this.quality, look);
     const scene = level.scene;
+    const envOk = params.get("env") === "0" ? false : await createEnvironment(scene, dev.isTouch ? 16 : 32);
     const player = new Player(scene, ZONE1.spawn, look.torchIntensity);
+    const fx = params.get("fx") === "0" ? undefined : createPostFx(scene, player.camera, this.quality, dev.isTouch);
+    void envOk; void fx;
     const hud = new Hud();
     const step = new FixedTimestep(1 / 60);
 

@@ -49,8 +49,8 @@ export class Props {
       for (const mat of container.materials) {
         const pbr = mat as PBRMaterial;
         pbr.maxSimultaneousLights = 6;
-        // Senza mappa ambiente il metallo puro appare nero: finché non ci sono i riflessi si attenua il fattore metallico.
-        if (key === "SM_Shelf_Unit") pbr.metallic = 0.35;
+        // Con la mappa ambiente i riflessi ci sono: metallo quasi pieno ma non specchio (usura già nella texture ORM).
+        if (key === "SM_Shelf_Unit") pbr.metallic = 0.85;
       }
     }
     const lod = sources.get("SM_Shelf_Unit_LOD1"), high = sources.get("SM_Shelf_Unit");

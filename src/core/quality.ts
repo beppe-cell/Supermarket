@@ -55,7 +55,8 @@ export function detectQuality(d: DeviceInfo): QualityId {
 export function profileFor(id: QualityId, isTouch: boolean): QualityProfile {
   const base = QUALITY_PROFILES[id];
   if (!isTouch || id !== "high") return base;
-  return { ...base, targetFps: 30, hardwareScaling: 1.5 };
+  // Telefono: niente SSAO/SSR né aberrazione (costo per pixel), bloom e grana restano leggeri.
+  return { ...base, targetFps: 30, hardwareScaling: 1.5, postProcess: { ...base.postProcess, ssao: false, ssr: false, chromatic: false } };
 }
 
 export function readDeviceInfo(gl?: { maxTextureSize: number }): DeviceInfo {
