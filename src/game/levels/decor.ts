@@ -12,6 +12,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import signsUrl from "../../../assets/exported/textures/signs.jpg?url";
 import cartonsUrl from "../../../assets/exported/textures/cartons.jpg?url";
 import fridgesUrl from "../../../assets/exported/textures/fridges.jpg?url";
+import keycardUrl from "../../../assets/exported/textures/keycard.png?url";
 import decalsUrl from "../../../assets/exported/textures/decals.png?url";
 import { ZONE1 } from "./zone1";
 
@@ -134,20 +135,16 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
 
   // --- Tessera elettronica: sullo scaffale, si accende lampeggiando solo se ti avvicini ---------------------------------
   const kp = ZONE1.pickups.find((p) => p.id === "key-warehouse") ?? { x: 1.86, y: 1.0, z: 1.5 };
-  const cardTex = new DynamicTexture("keycard-tex", { width: 512, height: 322 }, scene, true);
-  paintKeycard(cardTex.getContext() as unknown as CanvasRenderingContext2D); cardTex.update();
-  const cardM = new StandardMaterial("keycard", scene); cardM.diffuseTexture = cardTex; cardM.specularColor = new Color3(0.5, 0.5, 0.5); cardM.specularPower = 48; cardM.maxSimultaneousLights = 6;
+  const cardTex = tex(keycardUrl, true);
+  const cardM = new StandardMaterial("keycard", scene); cardM.diffuseTexture = cardTex; cardM.useAlphaFromDiffuseTexture = true; cardM.transparencyMode = StandardMaterial.MATERIAL_ALPHATEST; cardM.alphaCutOff = 0.5; cardM.backFaceCulling = false; cardM.specularColor = new Color3(0.5, 0.5, 0.5); cardM.specularPower = 48; cardM.maxSimultaneousLights = 6;
   const edge = new Vector4(0, 0, 0.002, 0.002);
-  const keycard = MeshBuilder.CreateBox("keycard", { width: 0.14, height: 0.0045, depth: 0.088, faceUV: [edge, edge, edge, edge, new Vector4(0, 0, 1, 1), edge] }, scene);
+  const keycard = MeshBuilder.CreateBox("keycard", { width: 0.14, height: 0.0045, depth: 0.0866, faceUV: [edge, edge, edge, edge, new Vector4(0, 0, 1, 1), edge] }, scene);
   keycard.position.set(kp.x, kp.y - 0.012, kp.z); keycard.rotation.y = 0.35; keycard.material = cardM; keycard.isPickable = false;
-  const led = MeshBuilder.CreateBox("keycard-led", { width: 0.012, height: 0.002, depth: 0.012 }, scene);
-  led.parent = keycard; led.position.set(0.052, 0.0033, -0.03);
-  const ledM = new StandardMaterial("keycard-led", scene); ledM.emissiveColor = new Color3(0.05, 0.12, 0.1); ledM.disableLighting = true; led.material = ledM; led.isPickable = false;
   const glowTex = new DynamicTexture("keycard-glow", 128, scene, true); { const c = glowTex.getContext(); const g = c.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, "rgba(120,255,210,1)"); g.addColorStop(0.25, "rgba(60,220,170,0.55)"); g.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = g; c.fillRect(0, 0, 128, 128); glowTex.update(); glowTex.hasAlpha = true; }
   const glow = MeshBuilder.CreatePlane("keycard-glow", { size: 0.55 }, scene);
   const glowM = new StandardMaterial("keycard-glow", scene); glowM.emissiveTexture = glowTex; glowM.opacityTexture = glowTex; glowM.disableLighting = true; glowM.backFaceCulling = false; glowM.alphaMode = 1; // additivo
   glow.material = glowM; glow.billboardMode = Mesh.BILLBOARDMODE_ALL; glow.isPickable = false; glow.isVisible = false; glow.alwaysSelectAsActiveMesh = true;
-  keycard.computeWorldMatrix(true); glow.position.copyFrom(led.getAbsolutePosition()); glow.position.y += 0.03;
+  keycard.computeWorldMatrix(true); glow.position.copyFrom(keycard.getAbsolutePosition()); glow.position.y += 0.05;
   const NEAR = 4.5;
   buildMist(scene, q);
 
@@ -158,24 +155,9 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
       const near = Math.hypot(px - kp.x, pz - kp.z) < NEAR;
       const on = near && Math.sin(t * 9) > 0;
       glow.isVisible = on;
-      ledM.emissiveColor.set(on ? 0.4 : 0.05, on ? 1 : 0.12, on ? 0.8 : 0.1);
-      cardM.emissiveColor.set(0, on ? 0.18 : 0, on ? 0.14 : 0);
+      cardM.emissiveColor.set(0, on ? 0.3 : 0, on ? 0.22 : 0);
     },
   };
-}
-
-/** Disegna la tessera (nero opaco, chip, banda magnetica, scritte). Sostituibile con una texture Gemini (vedi docs). */
-function paintKeycard(c: CanvasRenderingContext2D): void {
-  const W = 512, H = 322;
-  const bg = c.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#23282c"); bg.addColorStop(1, "#111417"); c.fillStyle = bg; c.fillRect(0, 0, W, H);
-  c.fillStyle = "#c0282d"; c.fillRect(0, 0, W, 34);                                           // fascia rossa
-  c.fillStyle = "#e6eef0"; c.font = "bold 22px sans-serif"; c.fillText("FRESH MARKET  ·  STAFF ACCESS", 18, 25);
-  c.fillStyle = "#000"; c.fillRect(0, 70, W, 54);                                              // banda magnetica
-  const chip = c.createLinearGradient(40, 150, 130, 230); chip.addColorStop(0, "#d9c37a"); chip.addColorStop(1, "#9c8742"); c.fillStyle = chip; c.beginPath(); c.roundRect(40, 150, 92, 72, 10); c.fill();
-  c.strokeStyle = "#5e5226"; c.lineWidth = 2; c.beginPath(); c.moveTo(40, 186); c.lineTo(132, 186); c.moveTo(86, 150); c.lineTo(86, 222); c.stroke();
-  c.fillStyle = "#cfe8dd"; c.font = "bold 34px sans-serif"; c.fillText("LIVELLO 2", 170, 190); c.font = "18px sans-serif"; c.fillStyle = "#7f948b"; c.fillText("MAGAZZINO · AREE RISERVATE", 170, 218);
-  c.fillStyle = "#e6eef0"; for (let i = 0; i < 46; i++) c.fillRect(40 + i * 8.5, 262, (i * 7) % 3 + 2, 34);   // codice a barre
-  c.fillStyle = "#3dffc4"; c.beginPath(); c.arc(W - 46, H - 40, 9, 0, Math.PI * 2); c.fill();
 }
 
 /** Nebbia: strati di sprite morbidi che vagano bassi nella sala (più fitti dove la qualità lo permette). */
