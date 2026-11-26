@@ -15,6 +15,7 @@ import type { InteractContext, Interactable } from "../interaction/interactable"
 import { ZONE1, type Box } from "./zone1";
 import type { LookPreset } from "./look";
 import { Props } from "./props";
+import { Matrix, Quaternion, Vector3 as V3 } from "@babylonjs/core/Maths/math.vector";
 
 export interface BuiltLevel {
   scene: Scene;
@@ -146,7 +147,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   // Props reali (se il caricamento fallisce restano i box grigi visibili)
   try {
     const props = await Props.load(scene);
-    placeProps(props);
+    placeProps(props, q, scene);
     for (const m of [shelvesBox, checkoutsBox, freezersBox]) if (m) m.isVisible = false; // restano come collisioni
   } catch (e) {
     console.warn("Props non caricati, uso greybox:", e);
@@ -163,8 +164,9 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
 }
 
 /** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */
-function placeProps(props: Props): void {
+function placeProps(props: Props, q: QualityProfile, scene: Scene): void {
   const SHELF_W = 1.2;
+  const units: { x: number; z: number; yaw: number }[] = [];
   for (const sh of ZONE1.shelves) {
     const n = Math.floor(sh.d / SHELF_W);
     const z0 = sh.z - (n * SHELF_W) / 2 + SHELF_W / 2;
@@ -173,7 +175,17 @@ function placeProps(props: Props): void {
       // schiena contro schiena: fronte verso la corsia (sinistra -X, destra +X); fronte nativo = +Z
       props.spawn("SM_Shelf_Unit", sh.x - 0.27, z, -Math.PI / 2);
       props.spawn("SM_Shelf_Unit", sh.x + 0.27, z, Math.PI / 2);
+      units.push({ x: sh.x - 0.27, z, yaw: -Math.PI / 2 }, { x: sh.x + 0.27, z, yaw: Math.PI / 2 });
     }
+  }
+  placeProducts(props, units, q.productDensity);
+  for (const t of ZONE1.trolleys) {
+    props.spawn(t.kind, t.x, t.z, t.yaw);
+    // collisione semplice (box invisibile) per non attraversare i carrelli
+    const dim = t.kind === "SM_Trolley" ? { w: 0.5, d: 0.9, h: 1 } : { w: 0.66, d: 0.79, h: 1.7 };
+    const c = MeshBuilder.CreateBox(`col-${t.kind}-${t.x}`, { width: dim.w, depth: dim.d, height: dim.h }, scene);
+    c.position.set(t.x, dim.h / 2, t.z); c.rotation.y = t.yaw + Math.PI / 2 * (t.kind === "SM_Trolley" ? 1 : 0);
+    c.isVisible = false; c.checkCollisions = true; c.freezeWorldMatrix();
   }
   for (const f of ZONE1.freezers) {
     const n = Math.floor(f.w / 1.6);
@@ -185,4 +197,53 @@ function placeProps(props: Props): void {
   }
   // Scatoloni lungo il muro ovest (posizioni fisse, nessun random)
   [-12, -9, -4, 0, 5, 9, 12].forEach((z, i) => props.spawn(i % 2 ? "SM_Box_Closed" : "SM_Box_Open", -19.3, z, i * 0.4));
+}
+
+// --- Prodotti sugli scaffali ---------------------------------------------------------------------------------
+const BOARD_Z = [0.26, 0.62, 0.98, 1.34, 1.7]; // altezza ripiani (m, dal pavimento)
+type Kind = { names: string[]; width: number; rows: number; h: number };
+const KINDS: Kind[] = [
+  { names: ["SM_P_Can_0", "SM_P_Can_1", "SM_P_Can_2"], width: 0.072, rows: 3, h: 0.122 },
+  { names: ["SM_P_Bottle_3", "SM_P_Bottle_4", "SM_P_Bottle_14"], width: 0.07, rows: 2, h: 0.24 },
+  { names: ["SM_P_Jar_9", "SM_P_Jar_10"], width: 0.08, rows: 2, h: 0.11 },
+  { names: ["SM_P_Cereal_5", "SM_P_Cereal_6", "SM_P_Cereal_13"], width: 0.215, rows: 1, h: 0.3 },
+  { names: ["SM_P_Bag_7", "SM_P_Bag_8", "SM_P_Bag_15"], width: 0.21, rows: 1, h: 0.28 },
+  { names: ["SM_P_Carton_11"], width: 0.075, rows: 2, h: 0.24 },
+  { names: ["SM_P_Pasta_12"], width: 0.105, rows: 2, h: 0.26 },
+];
+
+function rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/** Riempie i ripiani in modo deterministico; `density` = frazione di slot occupati (scaffali saccheggiati). */
+function placeProducts(props: Props, units: { x: number; z: number; yaw: number }[], density: number): void {
+  const r = rng(1337);
+  const out = new Map<string, Matrix[]>();
+  units.forEach((u, ui) => {
+    const unitM = Props.unitMatrix(u.x, u.z, u.yaw);
+    BOARD_Z.forEach((bz, bi) => {
+      const kind = KINDS[Math.floor(r() * KINDS.length)] as Kind;
+      const name = kind.names[Math.floor(r() * kind.names.length)] as string;
+      if (!props.has(name)) return;
+      // Alcuni ripiani vuoti del tutto (saccheggiati)
+      if (r() > density * 2.2 + 0.1) return;
+      const slots = Math.floor(1.04 / kind.width);
+      for (let row = 0; row < kind.rows; row++) {
+        const yBlender = -0.15 + row * Math.min(0.1, 0.34 / Math.max(kind.rows, 1)); // fronte -> dietro (Blender Y)
+        for (let i = 0; i < slots; i++) {
+          if (r() > density * 2.2) continue;
+          const lx = -0.52 + (i + 0.5) * (1.04 / slots) + (r() - 0.5) * 0.01;
+          const jitter = (r() - 0.5) * 0.12;
+          const p = Matrix.Compose(V3.One(), Quaternion.RotationYawPitchRoll(jitter, 0, 0), new V3(lx, bz + 0.011, -yBlender));
+          const m = p.multiply(unitM);
+          const list = out.get(name) ?? [];
+          list.push(m); out.set(name, list);
+        }
+      }
+      void ui; void bi;
+    });
+  });
+  props.fillProducts(out);
 }

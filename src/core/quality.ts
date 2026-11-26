@@ -11,23 +11,25 @@ export interface QualityProfile {
   maxActiveEnemies: number;
   targetFps: number;
   maxTextureSize: number;
+  /** Frazione di slot degli scaffali occupata da prodotti (scaffali "saccheggiati": è anche scelta di stile). */
+  productDensity: number;
 }
 
 export const QUALITY_PROFILES: Record<QualityId, QualityProfile> = {
   high: {
     id: "high", hardwareScaling: 1, shadows: true,
     postProcess: { grain: true, bloom: true, chromatic: true, ssao: true, ssr: true },
-    volumetricFog: true, maxDynamicLights: 6, maxActiveEnemies: 16, targetFps: 60, maxTextureSize: 4096,
+    volumetricFog: true, maxDynamicLights: 6, maxActiveEnemies: 16, targetFps: 60, maxTextureSize: 4096, productDensity: 0.3,
   },
   medium: {
     id: "medium", hardwareScaling: 1.25, shadows: true,
     postProcess: { grain: true, bloom: true, chromatic: true, ssao: false, ssr: false },
-    volumetricFog: false, maxDynamicLights: 3, maxActiveEnemies: 10, targetFps: 60, maxTextureSize: 2048,
+    volumetricFog: false, maxDynamicLights: 3, maxActiveEnemies: 10, targetFps: 60, maxTextureSize: 2048, productDensity: 0.18,
   },
   low: {
     id: "low", hardwareScaling: 1.75, shadows: false,
     postProcess: { grain: true, bloom: false, chromatic: false, ssao: false, ssr: false },
-    volumetricFog: false, maxDynamicLights: 1, maxActiveEnemies: 6, targetFps: 30, maxTextureSize: 1024,
+    volumetricFog: false, maxDynamicLights: 1, maxActiveEnemies: 6, targetFps: 30, maxTextureSize: 1024, productDensity: 0.08,
   },
 };
 

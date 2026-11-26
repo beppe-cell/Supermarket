@@ -34,6 +34,15 @@ export const ZONE1 = {
     { id: "bat-1", x: 4.4, y: 1.2, z: -4, label: "Batterie" },
     { id: "alc-1", x: 8.8, y: 1.2, z: 3, label: "Alcol" },
   ] as PickupDef[],
+  /** Carrelli: `kind` = SM_Trolley (carrello spesa) o SM_RollCage (gabbia a ruote). */
+  trolleys: [
+    { kind: "SM_Trolley", x: -12.5, z: -13.2, yaw: 0.4 },
+    { kind: "SM_Trolley", x: -9.8, z: -12.6, yaw: -0.3 },
+    { kind: "SM_Trolley", x: -2.5, z: -9.0, yaw: 2.2 },
+    { kind: "SM_Trolley", x: 4.4, z: -0.6, yaw: 1.1 },
+    { kind: "SM_RollCage", x: 13.2, z: 6.0, yaw: 0.3 },
+    { kind: "SM_RollCage", x: 13.6, z: 8.8, yaw: -0.5 },
+  ] as { kind: "SM_Trolley" | "SM_RollCage"; x: number; z: number; yaw: number }[],
   /** Neon: ogni punto genera una striscia emissiva; alcuni anche luce dinamica. */
   neons: Array.from({ length: 5 }, (_, r) => Array.from({ length: 4 }, (_, c): LightDef => ({ x: -15 + c * 10, z: -10 + r * 6 }))).flat(),
   emergencyLights: [{ x: 19, z: 0 }, { x: -19, z: -14 }, { x: -19, z: 14 }] as LightDef[],

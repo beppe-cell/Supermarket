@@ -25,3 +25,4 @@
 - ATTENZIONE: lo stile del pack (lowpoly, colori piatti arancio/rosso) non corrisponde al look realistico approvato → placeholder; serve ri-texturing PBR in Blender o sostituzione. Decisione dell'Art Director.
 - Scaffali: sostituiti con SM_Shelf_Unit originale (tools/make_shelf.py: 3.5k tri + LOD1 1k tri, PBR, texture baked sporco), schiena contro schiena, blocchi da 1.1 m a passo 4.4 m (corsie libere 3.3 m). Scritte di scelta look rimosse dal gioco.
 - Aperti: SM_Shelf_Unit da zero (in coda alla sessione locale, Blender non connesso); scaffali senza prodotti; post-processing look C; bordo cono torcia.
+- Prodotti (2026-11-26): 16 tipi propri con etichette INVENTATE (atlas `assets/source/labels_atlas.png`), thin instances, densità per profilo (0.3/0.18/0.08), ripiani in parte vuoti ("saccheggiati"). Carrelli T05/T06 (CC-BY) decimati a 7k/9k tri (`tools/prep_trolleys.py`) e piazzati con collisione semplice. Food pack T04 non usato.
