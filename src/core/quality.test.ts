@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { adaptScaling, detectQuality } from "./quality";
+import { adaptScaling, detectQuality, profileFor } from "./quality";
 
 const base = { isTouch: false, deviceMemoryGb: 8, cores: 8, maxTextureSize: 16384, isIos: false };
 
 describe("detectQuality", () => {
   it("PC potente -> high", () => expect(detectQuality(base)).toBe("high"));
   it("PC modesto -> medium", () => expect(detectQuality({ ...base, cores: 4 })).toBe("medium"));
-  it("iOS -> low", () => expect(detectQuality({ ...base, isTouch: true, isIos: true, cores: 6 })).toBe("low"));
-  it("mobile top -> medium", () => expect(detectQuality({ ...base, isTouch: true })).toBe("medium"));
+  it("iOS -> high (30 fps dinamico)", () => expect(detectQuality({ ...base, isTouch: true, isIos: true, cores: 6 })).toBe("high"));
+  it("mobile -> high", () => expect(detectQuality({ ...base, isTouch: true })).toBe("high"));
+  it("profilo mobile: 30 fps, scaling 1.5", () => {
+    const p = profileFor("high", true);
+    expect(p.targetFps).toBe(30);
+    expect(p.hardwareScaling).toBe(1.5);
+    expect(profileFor("high", false).targetFps).toBe(60);
+  });
 });
 
 describe("adaptScaling", () => {

@@ -6,7 +6,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { createEngine } from "./engine-factory";
 import { FixedTimestep } from "./fixed-timestep";
 import { InputManager } from "./input/input-manager";
-import { QUALITY_PROFILES, adaptScaling, detectQuality, readDeviceInfo, type QualityId, type QualityProfile } from "./quality";
+import { QUALITY_PROFILES, adaptScaling, detectQuality, profileFor, readDeviceInfo, type QualityId, type QualityProfile } from "./quality";
 import { buildZone1 } from "../game/levels/zone1-builder";
 import { ZONE1 } from "../game/levels/zone1";
 import { pickLook } from "../game/levels/look";
@@ -30,8 +30,10 @@ export class Game {
     const params = new URLSearchParams(location.search);
     this.engine = await createEngine(this.canvas, { preferWebGPU: params.get("gpu") === "1" });
     const dev = readDeviceInfo({ maxTextureSize: this.engine.getCaps().maxTextureSize });
-    const forced = params.get("quality") as QualityId | null;
-    this.quality = QUALITY_PROFILES[forced && forced in QUALITY_PROFILES ? forced : detectQuality(dev)];
+    // Override: ?quality=low|medium|high oppure #low|#medium|#high (l'Artifact accetta solo l'hash)
+    const hash = location.hash.slice(1);
+    const forced = (params.get("quality") ?? hash) as QualityId;
+    this.quality = profileFor(forced in QUALITY_PROFILES ? forced : detectQuality(dev), dev.isTouch);
     this.engine.setHardwareScalingLevel(this.quality.hardwareScaling);
 
     this.input = new InputManager(this.canvas, dev.isTouch);
@@ -106,7 +108,7 @@ export class Game {
     const avg = this.fpsAcc.reduce((a, b) => a + b, 0) / this.fpsAcc.length;
     this.fpsAcc.length = 0;
     const cur = this.engine.getHardwareScalingLevel();
-    const next = adaptScaling(cur, avg, this.quality.targetFps, this.quality.hardwareScaling, 3);
+    const next = adaptScaling(cur, avg, this.quality.targetFps, 1, 3);
     if (next !== cur) this.engine.setHardwareScalingLevel(next);
     this.dbg.textContent = `${avg.toFixed(0)} fps | ${this.quality.id} | scala ${next} | mesh ${meshes}`;
   }

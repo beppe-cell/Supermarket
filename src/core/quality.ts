@@ -41,11 +41,21 @@ export interface DeviceInfo {
   isIos: boolean;
 }
 
-/** Scelta iniziale del profilo (pura, testabile). Il benchmark runtime può correggerla. */
+/**
+ * Scelta iniziale del profilo (pura, testabile). Sui telefoni si parte da "high" con obiettivo 30 fps:
+ * `profileFor` aggiunge risoluzione dinamica (parte a 1.5x e scende/sale in base agli fps).
+ */
 export function detectQuality(d: DeviceInfo): QualityId {
-  if (d.isTouch || d.isIos) return d.cores >= 8 && (d.deviceMemoryGb ?? 4) >= 6 ? "medium" : "low";
+  if (d.isTouch || d.isIos) return "high";
   if (d.cores >= 8 && d.maxTextureSize >= 8192) return "high";
   return "medium";
+}
+
+/** Profilo effettivo: su touch l'alta qualità mira a 30 fps con scaling dinamico (min 1.0). */
+export function profileFor(id: QualityId, isTouch: boolean): QualityProfile {
+  const base = QUALITY_PROFILES[id];
+  if (!isTouch || id !== "high") return base;
+  return { ...base, targetFps: 30, hardwareScaling: 1.5 };
 }
 
 export function readDeviceInfo(gl?: { maxTextureSize: number }): DeviceInfo {
