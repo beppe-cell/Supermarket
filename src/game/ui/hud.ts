@@ -49,12 +49,15 @@ const CSS = `
 .lock kbd{font:700 11px ui-monospace,monospace;background:#dfe6e9;color:#101418;border-radius:3px;padding:1px 5px;margin:0 2px}
 .dbg{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font:10px ui-monospace,monospace;color:#6f8a80;opacity:.8;white-space:pre}
 /* layout telefono: pannelli compatti in alto, i comandi occupano il basso */
-body.touch .vitals{bottom:auto;top:var(--st);width:min(190px,34vw);gap:4px;padding:6px 8px}
-body.touch .weapon{bottom:auto;right:calc(var(--sr) + 66px);top:var(--st);padding:5px 10px;gap:8px}
-body.touch .weapon .mag{font-size:22px}body.touch .weapon .res{font-size:13px}
-body.touch .weapon .wico{font-size:20px}
-body.touch .obj{top:calc(var(--st) + 52px);font-size:12px}
-body.touch .toasts{top:calc(var(--st) + 82px)}
+body.touch .vitals{bottom:auto;top:var(--st);left:max(10px,env(safe-area-inset-left,0px));width:min(116px,24vw);gap:3px;padding:4px 6px;border-radius:5px}
+body.touch .vrow{gap:5px}body.touch .vrow .ico{width:13px;font-size:12px}
+body.touch .vbar{height:6px}body.touch .vbar.stam{height:4px}
+body.touch .vnum{min-width:2.2em;font-size:11px}
+body.touch .weapon{bottom:auto;right:calc(var(--sr) + 62px);top:var(--st);padding:3px 8px;gap:6px}
+body.touch .weapon .mag{font-size:17px}body.touch .weapon .res{font-size:11px;margin-left:2px}
+body.touch .weapon .wico{font-size:15px}body.touch .weapon .rl{font-size:9px}
+body.touch .obj{top:calc(var(--st) + 42px);font-size:11px;padding:4px 9px}
+body.touch .toasts{top:calc(var(--st) + 68px)}
 body.touch .prompt{top:50%;margin-top:34px;font-size:14px}
 body.touch .prompt kbd{display:none}
 @media (max-height:420px){body.touch .obj{display:none}}

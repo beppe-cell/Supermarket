@@ -43,7 +43,7 @@ export interface DeviceInfo {
 
 /**
  * Scelta iniziale del profilo (pura, testabile). Sui telefoni si parte da "high" con obiettivo 30 fps:
- * `profileFor` aggiunge risoluzione dinamica (parte a 1.5x e scende/sale in base agli fps).
+ * `profileFor` aggiunge risoluzione dinamica (parte a 1.0x = pixel CSS e scende/sale in base agli fps).
  */
 export function detectQuality(d: DeviceInfo): QualityId {
   if (d.isTouch || d.isIos) return "high";
@@ -56,7 +56,7 @@ export function profileFor(id: QualityId, isTouch: boolean): QualityProfile {
   const base = QUALITY_PROFILES[id];
   if (!isTouch || id !== "high") return base;
   // Telefono: niente SSAO/SSR né aberrazione (costo per pixel), bloom e grana restano leggeri.
-  return { ...base, targetFps: 30, hardwareScaling: 1.5, postProcess: { ...base.postProcess, ssao: false, ssr: false, chromatic: false } };
+  return { ...base, targetFps: 30, hardwareScaling: 1, postProcess: { ...base.postProcess, ssao: false, ssr: false, chromatic: false } };
 }
 
 export function readDeviceInfo(gl?: { maxTextureSize: number }): DeviceInfo {

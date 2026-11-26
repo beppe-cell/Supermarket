@@ -8,10 +8,10 @@ describe("detectQuality", () => {
   it("PC modesto -> medium", () => expect(detectQuality({ ...base, cores: 4 })).toBe("medium"));
   it("iOS -> high (30 fps dinamico)", () => expect(detectQuality({ ...base, isTouch: true, isIos: true, cores: 6 })).toBe("high"));
   it("mobile -> high", () => expect(detectQuality({ ...base, isTouch: true })).toBe("high"));
-  it("profilo mobile: 30 fps, scaling 1.5", () => {
+  it("profilo mobile: 30 fps, scaling 1.0", () => {
     const p = profileFor("high", true);
     expect(p.targetFps).toBe(30);
-    expect(p.hardwareScaling).toBe(1.5);
+    expect(p.hardwareScaling).toBe(1);
     expect(profileFor("high", false).targetFps).toBe(60);
   });
 });

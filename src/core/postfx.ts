@@ -20,6 +20,9 @@ export function createPostFx(scene: Scene, camera: Camera, q: QualityProfile, to
   pipe.samples = touch || q.id !== "high" ? 1 : 4;
   pipe.fxaaEnabled = pipe.samples === 1;
 
+  // Nitidezza: sul telefono (FXAA e risoluzione ridotta ammorbidiscono) si ripassa un leggero sharpen
+  pipe.sharpenEnabled = touch; if (touch) { pipe.sharpen.edgeAmount = 0.4; pipe.sharpen.colorAmount = 1; }
+
   pipe.bloomEnabled = pp.bloom;
   pipe.bloomThreshold = 0.85; pipe.bloomWeight = 0.45; pipe.bloomKernel = 48; pipe.bloomScale = touch ? 0.35 : 0.5;
 

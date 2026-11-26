@@ -35,6 +35,7 @@ export class Game {
   private input!: InputManager;
   private quality!: QualityProfile;
   private fpsAcc: number[] = [];
+  private touch = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {}
 
@@ -47,6 +48,7 @@ export class Game {
     const forced = (params.get("quality") ?? hash) as QualityId;
     this.quality = profileFor(forced in QUALITY_PROFILES ? forced : detectQuality(dev), dev.isTouch);
     this.engine.setHardwareScalingLevel(this.quality.hardwareScaling);
+    this.touch = dev.isTouch;
 
     const settings = loadSettings();
     let inventoryUi: InventoryUI | undefined;
@@ -204,7 +206,9 @@ export class Game {
     const avg = this.fpsAcc.reduce((a, b) => a + b, 0) / this.fpsAcc.length;
     this.fpsAcc.length = 0;
     const cur = this.engine.getHardwareScalingLevel();
-    const next = adaptScaling(cur, avg, this.quality.targetFps, 1, 3);
+    // sul telefono si può salire sopra i pixel CSS (min <1) quando c'è margine: immagine più nitida
+    const minScale = this.touch ? 1 / Math.min(window.devicePixelRatio || 1, 1.5) : 1;
+    const next = adaptScaling(cur, avg, this.quality.targetFps, minScale, 3);
     if (next !== cur) this.engine.setHardwareScalingLevel(next);
     hud.setDebug(`${avg.toFixed(0)} fps | ${this.quality.id} | scala ${next} | mesh ${meshes}`);
   }
