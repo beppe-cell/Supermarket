@@ -42,6 +42,14 @@ for name in list(meshes):
     o.select_set(False)
 for e in [o for o in bpy.data.objects if o.type == "EMPTY"]:
     bpy.data.objects.remove(e, do_unlink=True)
+# Adatta la palette al look C: desatura ~70% e tinta fredda (il pack è lowpoly a colori vivaci)
+import numpy as np
+for img in bpy.data.images:
+    if img.size[0] == 0: continue
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)
+    lum = px[:, :3].mean(axis=1, keepdims=True)
+    px[:, :3] = (lum * 0.7 + px[:, :3] * 0.3) * np.array([0.92, 0.97, 1.04], dtype=np.float32) * 0.9
+    img.pixels.foreach_set(px.ravel()); img.update(); img.pack()
 bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_yup=True, export_apply=True)
 # dims: x=larghezza, y=profondita (Blender), z=altezza
 json.dump(dims, open(out_json, "w"), indent=1)

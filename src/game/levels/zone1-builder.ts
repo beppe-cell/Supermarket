@@ -15,6 +15,51 @@ import type { InteractContext, Interactable } from "../interaction/interactable"
 import { ZONE1, type Box } from "./zone1";
 import type { LookPreset } from "./look";
 import { Props } from "./props";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import type { Mesh as MeshT } from "@babylonjs/core/Meshes/mesh";
+import floorA from "../../../assets/exported/textures/floor_albedo.jpg?url";
+import floorN from "../../../assets/exported/textures/floor_normal.png?url";
+import floorO from "../../../assets/exported/textures/floor_orm.jpg?url";
+import wallA from "../../../assets/exported/textures/wall_albedo.jpg?url";
+import wallN from "../../../assets/exported/textures/wall_normal.png?url";
+import wallO from "../../../assets/exported/textures/wall_orm.jpg?url";
+import ceilA from "../../../assets/exported/textures/ceiling_albedo.jpg?url";
+import ceilN from "../../../assets/exported/textures/ceiling_normal.png?url";
+import ceilO from "../../../assets/exported/textures/ceiling_orm.jpg?url";
+
+/** Materiale PBR da set albedo/normale/ORM (R=AO, G=rugosità, B=metallo). */
+function pbr(scene: Scene, name: string, urls: [string, string, string], tint = 1): PBRMaterial {
+  const m = new PBRMaterial(name, scene);
+  m.albedoTexture = new Texture(urls[0], scene);
+  m.bumpTexture = new Texture(urls[1], scene);
+  const orm = new Texture(urls[2], scene);
+  m.metallicTexture = orm;
+  m.useRoughnessFromMetallicTextureGreen = true;
+  m.useMetallnessFromMetallicTextureBlue = true;
+  m.useAmbientOcclusionFromMetallicTextureRed = true;
+  m.metallic = 1; m.roughness = 1; // moltiplicatori: i valori reali vengono dalla texture ORM
+  m.albedoColor = new Color3(tint, tint, tint);
+  m.maxSimultaneousLights = 6;
+  m.environmentIntensity = 0.3;
+  return m;
+}
+
+/** UV in coordinate mondo (m / `tile`) scelte in base alla normale: le texture mantengono la scala reale su ogni parete. */
+function worldUV(mesh: MeshT, tile: number): void {
+  const pos = mesh.getVerticesData(VertexBuffer.PositionKind), nor = mesh.getVerticesData(VertexBuffer.NormalKind);
+  if (!pos || !nor) return;
+  const uv = new Float32Array((pos.length / 3) * 2);
+  for (let i = 0; i < pos.length / 3; i++) {
+    const x = pos[i * 3] ?? 0, y = pos[i * 3 + 1] ?? 0, z = pos[i * 3 + 2] ?? 0;
+    const ax = Math.abs(nor[i * 3] ?? 0), ay = Math.abs(nor[i * 3 + 1] ?? 0), az = Math.abs(nor[i * 3 + 2] ?? 0);
+    let u: number, v: number;
+    if (ay >= ax && ay >= az) { u = x; v = z; } else if (ax >= az) { u = z; v = y; } else { u = x; v = y; }
+    uv[i * 2] = u / tile; uv[i * 2 + 1] = v / tile;
+  }
+  mesh.setVerticesData(VertexBuffer.UVKind, uv);
+}
 import { Matrix, Quaternion, Vector3 as V3 } from "@babylonjs/core/Maths/math.vector";
 
 export interface BuiltLevel {
@@ -45,23 +90,23 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   amb.diffuse = new Color3(...look.ambientDiffuse);
   amb.groundColor = new Color3(0.08, 0.09, 0.1);
 
-  const floorM = mat(scene, "floor", look.floor);
-  const wallM = mat(scene, "wall", look.wall);
+  const floorM = pbr(scene, "floor", [floorA, floorN, floorO]);
+  const wallM = pbr(scene, "wall", [wallA, wallN, wallO]);
   const shelfM = mat(scene, "shelf", look.shelf);
   const counterM = mat(scene, "counter", "#4a5055");
   const freezerM = mat(scene, "freezer", "#7d8a92");
-  const ceilM = mat(scene, "ceiling", look.ceiling);
+  const ceilM = pbr(scene, "ceiling", [ceilA, ceilN, ceilO], 0.75);
   const neonM = mat(scene, "neon", look.neonColor, true);
   const emergM = mat(scene, "emerg", "#ff2a2a", true);
 
   const b = ZONE1.bounds;
   const W = b.maxX - b.minX, D = b.maxZ - b.minZ;
   const floor = MeshBuilder.CreateGround("floor", { width: W, height: D }, scene);
-  floor.material = floorM; floor.checkCollisions = true;
+  floor.material = floorM; floor.checkCollisions = true; worldUV(floor, 2);
   const ceiling = MeshBuilder.CreateGround("ceiling", { width: W, height: D }, scene);
-  ceiling.position.y = ZONE1.ceiling; ceiling.rotation.x = Math.PI; ceiling.material = ceilM;
+  ceiling.position.y = ZONE1.ceiling; ceiling.rotation.x = Math.PI; ceiling.material = ceilM; worldUV(ceiling, 1.2);
 
-  const boxes = (list: Box[], name: string, m: StandardMaterial, defaultH = ZONE1.ceiling): Mesh | undefined => {
+  const boxes = (list: Box[], name: string, m: StandardMaterial | PBRMaterial, defaultH = ZONE1.ceiling): Mesh | undefined => {
     const parts = list.map((bx, i) => {
       const h = bx.h ?? defaultH;
       const part = MeshBuilder.CreateBox(`${name}${i}`, { width: bx.w, depth: bx.d, height: h }, scene);
@@ -69,7 +114,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
       return part;
     });
     const merged = Mesh.MergeMeshes(parts, true, true);
-    if (merged) { merged.name = name; merged.material = m; merged.checkCollisions = true; merged.freezeWorldMatrix(); }
+    if (merged) { merged.name = name; merged.material = m; merged.checkCollisions = true; if (m === wallM) worldUV(merged, 2); merged.freezeWorldMatrix(); }
     return merged ?? undefined;
   };
   boxes(ZONE1.walls, "walls", wallM);
