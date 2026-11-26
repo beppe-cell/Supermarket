@@ -22,7 +22,10 @@ export interface EnemyContext {
 }
 
 const FACING_OFFSET = 0;           // calibrazione: orientamento del modello rispetto a +Z
-const WALK_SPEED = 1.5, CHASE_SPEED = 2.5, TURN = 5;
+const WALK_SPEED = 1.4, CHASE_SPEED = 3.1, TURN = 5;
+/** Velocità (m/s) a cui i piedi non scivolano a ratio 1 (misurata da tools/prep_android.py). */
+const WALK_ANIM_V = 2.04, RUN_ANIM_V = 4.08;
+const LOOPS = ["Idle", "Scan", "Walk", "Run"], ONESHOT = ["Attack", "Hit"];
 const FOV = (110 * Math.PI) / 180, SIGHT = 15, MELEE_RANGE = 1.55, MELEE_DAMAGE = 12;
 const DAMAGE: Record<HitPart, number> = { head: 60, torso: 34, legs: 22 };
 
@@ -32,7 +35,9 @@ export class Android {
   state: EnemyState = "patrol";
   hp = 100;
   private readonly groups = new Map<string, AnimationGroup>();
-  private readonly weights = new Map<string, number>([["Idle", 1], ["Walk", 0]]);
+  private readonly weights = new Map<string, number>([["Idle", 1]]);
+  private hitT = 0;
+  private scanning = false;
   private readonly hitboxes: AbstractMesh[] = [];
   private yaw = 0;
   private path: Pt[] = [];
@@ -61,7 +66,7 @@ export class Android {
     const model = inst.rootNodes[0];
     if (model) model.parent = a.root;
     for (const g of inst.animationGroups) { const n = g.name.replace(/_a\d+$/, ""); a.groups.set(n, g); }
-    for (const [n, g] of a.groups) { g.stop(); if (n === "Idle" || n === "Walk") { g.start(true, 1, g.from, g.to, false); g.setWeightForAllAnimatables(n === "Idle" ? 1 : 0); } }
+    for (const [n, g] of a.groups) { g.stop(); if (n === "Idle") { g.start(true, 1, g.from, g.to, false); g.setWeightForAllAnimatables(1); } }
     a.root.position.set(start.x, 0, start.z); a.yaw = yaw; a.root.rotation.y = yaw + FACING_OFFSET;
     // hitbox invisibili per parte del corpo (raggiungibili dal raycast dei proiettili)
     const mk = (part: HitPart, w: number, h: number, d: number, y: number) => {
@@ -85,6 +90,7 @@ export class Android {
   hit(part: HitPart, ctx: Pick<EnemyContext, "sfx" | "player">): boolean {
     if (!this.alive) return false;
     this.hp -= DAMAGE[part]; this.flashT = 0.12;
+    if (this.hp > 0 && this.state !== "attack") { this.hitT = 0.5; this.play("Hit", false, 1.1); }
     if (this.state === "patrol" || this.state === "search") { this.state = "chase"; this.lastKnown = { x: ctx.player.x, z: ctx.player.z }; this.alertT = 0; }
     if (this.hp <= 0) { this.die(ctx); return true; }
     return false;
@@ -105,8 +111,18 @@ export class Android {
     ctx.sfx.death(d, 0);
   }
 
+  /** Solo QA (?debug=1): blocca l'IA e riproduce un clip; `yaw` orienta il modello. */
+  debugPlay(name: string, loop: boolean, yaw?: number, frac?: number): void {
+    this.debugHold = true; if (yaw !== undefined) { this.yaw = yaw; this.root.rotation.y = yaw + FACING_OFFSET; }
+    for (const g of this.groups.values()) g.stop();
+    const g = this.groups.get(name); if (g) { g.start(loop, 1, g.from, g.to, false); g.setWeightForAllAnimatables(1); if (frac !== undefined) { g.goToFrame(g.from + frac * (g.to - g.from)); g.pause(); } }
+  }
+  private debugHold = false;
+  debugBone(name: string): unknown { const n = this.root.getChildTransformNodes(false, (x) => x.name.startsWith(name))[0]; return n ? [n.name, n.rotationQuaternion?.asArray().map((v) => +v.toFixed(3)), n.position.asArray().map((v) => +v.toFixed(3))] : null; }
+  debugInfo(): unknown { return [...this.groups].map(([n, g]) => [n, g.isPlaying, g.from, g.to, g.targetedAnimations.length, +(g.animatables[0]?.masterFrame ?? -1).toFixed(1), g.speedRatio]); }
+
   update(dt: number, ctx: EnemyContext): void {
-    if (this.state === "dead") return;
+    if (this.state === "dead" || this.debugHold) return;
     const me: Pt = { x: this.root.position.x, z: this.root.position.z };
     const pl: Pt = { x: ctx.player.x, z: ctx.player.z };
     const dist = Math.hypot(pl.x - me.x, pl.z - me.z);
@@ -175,13 +191,13 @@ export class Android {
   }
 
   private doSearch(dt: number, me: Pt, grid: NavGrid): void {
-    this.moving = false;
+    this.moving = false; this.scanning = false;
     if (!this.lastKnown) { this.state = "patrol"; return; }
     if (this.path.length === 0 && this.wait <= 0) {
       this.path = grid.findPath(me, this.lastKnown);
       if (this.path.length === 0) { this.wait = 2.5; }
     }
-    if (this.wait > 0) { this.wait -= dt; this.turnTo(this.yaw + 1.2 * Math.sin(performance.now() / 700), dt); if (this.wait <= 0) { this.state = "patrol"; this.path = []; } return; }
+    if (this.wait > 0) { this.scanning = true; this.wait -= dt; if (this.wait <= 0) { this.state = "patrol"; this.path = []; } return; }
     if (!this.followPath(dt, me, WALK_SPEED * 1.4)) { this.wait = 3; this.path = []; }
   }
 
@@ -207,16 +223,25 @@ export class Android {
   }
 
   private blendAnimations(dt: number): void {
-    const want = new Map<string, number>();
-    if (this.state === "attack") want.set("Attack", 1);
-    else if (this.moving) want.set("Walk", 1); else want.set("Idle", 1);
-    for (const n of ["Idle", "Walk", "Attack"]) {
+    this.hitT = Math.max(0, this.hitT - dt);
+    let want = "Idle";
+    if (this.hitT > 0) want = "Hit";
+    else if (this.state === "attack") want = "Attack";
+    else if (this.moving) want = this.state === "chase" ? "Run" : "Walk";
+    else if (this.scanning && this.state === "search") want = "Scan";
+    for (const n of [...LOOPS, ...ONESHOT]) {
       const g = this.groups.get(n); if (!g) continue;
-      const cur = this.weights.get(n) ?? 0, tgt = want.get(n) ?? 0, w = cur + (tgt - cur) * Math.min(1, dt * 9);
+      const cur = this.weights.get(n) ?? 0, tgt = n === want ? 1 : 0, w = cur + (tgt - cur) * Math.min(1, dt * (n === "Hit" ? 22 : 9));
       this.weights.set(n, w);
-      if (n === "Idle" || n === "Walk") { if (w > 0.01 && !g.isPlaying) g.start(true, 1, g.from, g.to, false); g.setWeightForAllAnimatables(w); }
-      else g.setWeightForAllAnimatables(w);
+      if (LOOPS.includes(n)) {
+        if (tgt > 0 && !g.isPlaying) { g.start(true, 1, g.from, g.to, false); g.setWeightForAllAnimatables(0); }
+        else if (tgt === 0 && w < 0.01 && g.isPlaying) { g.stop(); this.weights.set(n, 0); continue; }
+      }
+      if (g.isPlaying) g.setWeightForAllAnimatables(w);
     }
-    const walk = this.groups.get("Walk"); if (walk) walk.speedRatio = this.state === "chase" ? 1.7 : 1.0;
+    // sincronizza il ritmo dei passi con la velocità reale (niente piedi che scivolano)
+    const walk = this.groups.get("Walk"), run = this.groups.get("Run");
+    if (walk) walk.speedRatio = Math.max(0.3, this.speedNow / WALK_ANIM_V);
+    if (run) run.speedRatio = Math.max(0.4, this.speedNow / RUN_ANIM_V);
   }
 }
