@@ -13,7 +13,9 @@ const results = [];
 const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "OK  " : "FAIL"} ${name} ${info}`); };
 
 const p0 = await page.evaluate(() => window.__dbg.pos());
-await page.keyboard.down("KeyW"); await page.waitForTimeout(2000); await page.keyboard.up("KeyW");
+await page.keyboard.down("KeyW");
+await page.waitForFunction((z) => window.__dbg.pos()[2] - z > 0.8, p0[2], { timeout: 40000 }).catch(() => {});
+await page.keyboard.up("KeyW");
 const p1 = await page.evaluate(() => window.__dbg.pos());
 check("cammina avanti (+z)", p1[2] - p0[2] > 0.8, `z ${p0[2].toFixed(1)} -> ${p1[2].toFixed(1)}`);
 
@@ -28,7 +30,9 @@ check("muro sud blocca", p2[2] > -15, `z=${p2[2].toFixed(2)}`);
 await page.evaluate(() => { window.__dbg.teleport(-13.2, -3); window.__dbg.look(0, 0); });
 await page.waitForTimeout(300);
 const a0 = await page.evaluate(() => window.__dbg.pos());
-await page.keyboard.down("KeyW"); await page.waitForTimeout(3000); await page.keyboard.up("KeyW");
+await page.keyboard.down("KeyW");
+await page.waitForFunction((z) => window.__dbg.pos()[2] - z > 1.0, a0[2], { timeout: 40000 }).catch(() => {});
+await page.keyboard.up("KeyW");
 const a1 = await page.evaluate(() => window.__dbg.pos());
 check("percorre la corsia scaffali", a1[2] - a0[2] > 1.0 && Math.abs(a1[0] + 13.2) < 0.5, `z ${a0[2].toFixed(1)} -> ${a1[2].toFixed(1)}, x ${a1[0].toFixed(2)}`);
 

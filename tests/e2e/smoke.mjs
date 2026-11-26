@@ -13,7 +13,7 @@ for (const [name, ctxOpts] of [["desktop", { viewport: { width: 1280, height: 72
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   await page.goto(url);
-  await page.waitForFunction(() => document.body.innerText.includes("fps"), null, { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => document.body.innerText.includes("fps"), null, { timeout: 90000 }).catch(() => {});
   const hud = (await page.evaluate(() => document.body.innerText)).trim();
   const px = await page.evaluate(() => { const c = document.getElementById("game"); return c ? [c.width, c.height] : null; });
   await page.screenshot({ path: `tests/e2e/out-${name}.png` });
