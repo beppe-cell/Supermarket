@@ -62,9 +62,14 @@ export class TouchInput implements InputSource {
       this.root.appendChild(el); this.btns.set(name, el); return el;
     };
     this.hold(place("fire", "", "fire", 98, 0, 0, "fire"), (v) => { this.fire = v; if (v) navigator.vibrate?.(12); });
-    this.hold(place("reload", "RICARICA", "reload", 58, 104, 66), (v) => { this.reload = v; });
-    this.tap(place("crouch", "ABBASSA", "crouch", 54, 122, -14), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
-    this.hold(place("torch", "TORCIA", "torch", 54, 190, 48), (v) => (this.torch = v));
+    // Gli altri pulsanti stanno in colonna sul bordo sinistro: in basso a destra resta libera tutta la zona per ruotare la visuale col pollice
+    const side = (name: string, label: string, icon: string, k: number) => {
+      const el = place(name, label, icon, 54, 0, 0); el.style.right = "auto"; el.style.bottom = "auto";
+      el.style.left = `calc(14px + ${sa("left")})`; el.style.top = `calc(22% + ${k * 72}px)`; return el;
+    };
+    this.hold(side("reload", "RICARICA", "reload", 0), (v) => { this.reload = v; });
+    this.tap(side("crouch", "ABBASSA", "crouch", 1), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
+    this.hold(side("torch", "TORCIA", "torch", 2), (v) => (this.torch = v));
     // Inventario: in alto a destra
     const inv = document.createElement("div"); inv.className = "tc-b"; inv.innerHTML = svg("bag") + "<span>ZAINO</span>";
     inv.style.width = inv.style.height = "54px"; inv.style.right = `calc(14px + ${sa("right")})`; inv.style.top = `calc(14px + ${sa("top")})`;
