@@ -5,7 +5,6 @@ export class KeyboardMouseInput implements InputSource {
   private dx = 0;
   private dy = 0;
   private firing = false;
-  private aiming = false;
   private readonly abort = new AbortController();
 
   constructor(canvas: HTMLCanvasElement) {
@@ -17,9 +16,8 @@ export class KeyboardMouseInput implements InputSource {
     addEventListener("mousemove", (e) => {
       if (document.pointerLockElement === canvas) { this.dx += e.movementX; this.dy += e.movementY; }
     }, o);
-    addEventListener("mousedown", (e) => { if (document.pointerLockElement !== canvas) return; if (e.button === 0) this.firing = true; if (e.button === 2) this.aiming = true; }, o);
-    addEventListener("mouseup", (e) => { if (e.button === 0) this.firing = false; if (e.button === 2) this.aiming = false; }, o);
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault(), o);
+    addEventListener("mousedown", (e) => { if (e.button === 0 && document.pointerLockElement === canvas) this.firing = true; }, o);
+    addEventListener("mouseup", (e) => { if (e.button === 0) this.firing = false; }, o);
   }
 
   poll(out: InputState): void {
@@ -31,7 +29,7 @@ export class KeyboardMouseInput implements InputSource {
     this.dx = 0; this.dy = 0;
     out.sprint ||= k.has("ShiftLeft");
     out.crouch ||= k.has("ControlLeft") || k.has("KeyC");
-    out.fire ||= this.firing; out.aim ||= this.aiming;
+    out.fire ||= this.firing;
     out.interact ||= k.has("KeyE");
     out.torch ||= k.has("KeyF");
     out.reload ||= k.has("KeyR");

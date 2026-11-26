@@ -35,6 +35,8 @@ export class Pistol {
   private bobT = 0;
   /** 0..1: quanto la pistola è in posizione di mira. */
   private aimT = 0;
+  /** secondi di mira residui dopo l'ultimo sparo (la pistola va in mira da sola quando si spara). */
+  private aimHold = 0;
   private prevFire = false;
   private prevReload = false;
   private readonly vm: TransformNode;
@@ -57,6 +59,8 @@ export class Pistol {
     return new Pistol(scene, camera, vm, muzzle, new WeaponEffects(scene, muzzle, maxLights), sfx);
   }
 
+  /** In mira (automatica mentre si spara). */
+  get aiming(): boolean { return this.aimT > 0.5; }
   get reloading(): boolean { return this.reloadT > 0; }
   get muzzleWorld(): Vector3 { return this.muzzleNode.getAbsolutePosition(); }
 
@@ -84,7 +88,8 @@ export class Pistol {
     // animazione del viewmodel: rinculo a molla, bob, abbassamento in corsa/ricarica
     this.kick = Math.max(0, this.kick - dt * 9); this.heat = Math.max(0, this.heat - dt * 2.2);
     this.bobT += dt * (state.moving ? (state.sprinting ? 11 : 7) : 1.5);
-    const wantAim = !!input.aim && !state.sprinting && this.reloadT <= 0;
+    if (input.fire) this.aimHold = 0.45; else this.aimHold = Math.max(0, this.aimHold - dt);
+    const wantAim = (!!input.aim || this.aimHold > 0) && !state.sprinting && this.reloadT <= 0;
     this.aimT += ((wantAim ? 1 : 0) - this.aimT) * Math.min(1, dt * 12);
     const a = this.aimT, hip = 1 - a;
     this.camera.fov = HIP_FOV + (AIM_FOV - HIP_FOV) * a;

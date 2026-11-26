@@ -67,6 +67,7 @@ export class Game {
     addEventListener("pointerdown", wake); addEventListener("keydown", wake); addEventListener("touchstart", wake);
     const grid = buildZone1Nav();
     const pistol = await Pistol.create(scene, player.camera, sfx, this.quality.maxDynamicLights);
+    const pistolRef = pistol;
     const infectedModel = await loadModel(scene, "SM_Infected");
     const enemies = [
       Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -3 }, { x: -4.4, z: -8 }, { x: -8.8, z: -8 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
@@ -131,6 +132,8 @@ export class Game {
         mat: (re: string, prop: string, v: unknown) => scene.materials.filter((m) => new RegExp(re).test(m.name)).map((m) => { const o = m as unknown as Record<string, unknown>; if (Array.isArray(v)) (o[prop] as { copyFromFloats(r: number, g: number, b: number): void }).copyFromFloats(v[0], v[1], v[2]); else if (v !== undefined) o[prop] = v; return [m.name, String(o[prop])]; }),
         enemies: () => enemies.map((e) => [e.state, e.hp, +e.position.x.toFixed(2), +e.position.z.toFixed(2)]),
         enemyTo: (i: number, x: number, z: number) => enemies[i]?.position.set(x, 0, z),
+        gridInfo: (x0: number, z0: number, x1: number, z1: number) => [grid.lineClear({ x: x0, z: z0 }, { x: x1, z: z1 }), grid.isBlocked(x0, z0), grid.isBlocked(x1, z1)],
+        enemyFace: (i: number, yaw: number) => enemies[i]?.debugFace(yaw),
         enemyBone: (i: number, n: string) => enemies[i]?.debugBone(n),
         enemyInfo: (i: number) => enemies[i]?.debugInfo(),
         enemyPlay: (i: number, name: string, loop: boolean, yaw?: number, frac?: number) => enemies[i]?.debugPlay(name, loop, yaw, frac),
@@ -156,7 +159,7 @@ export class Game {
     this.engine.runRenderLoop(() => {
       const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
       const input = this.input.poll();
-      if (input.aim) { input.lookDX *= 0.6; input.lookDY *= 0.6; } // sensibilità ridotta in mira
+      if (pistolRef && pistolRef.aiming) { input.lookDX *= 0.6; input.lookDY *= 0.6; } // sensibilità ridotta in mira
       if (!paused) {
         time += dt;
         const n = step.advance(dt);
@@ -182,7 +185,7 @@ export class Game {
         // armi e nemici
         const moving = input.moveX !== 0 || input.moveY !== 0;
         const sprinting = moving && input.sprint && player.stamina.canSprint && !input.crouch;
-        if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload, aim: input.aim || dbgAim }, { moving, sprinting }, {
+        if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload, aim: dbgAim }, { moving, sprinting }, {
           onShot: () => { const p = { x: player.position.x, z: player.position.z }; for (const e of enemies) if (Vector3.Distance(e.position, player.position) < 32) e.hear(p); },
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {
@@ -192,7 +195,7 @@ export class Game {
           },
         });
         const ctxE = {
-          player: player.position, grid, sfx, playerAlive: !dead,
+          player: player.position, eye: player.camera.globalPosition, grid, sfx, playerAlive: !dead,
           playerFlags: { torch: player.torch.isEnabled(), sprinting, crouching: player.isCrouching },
           hurtPlayer: (n: number, from: Vector3) => {
             player.damage(n); sfx.playerHurt();
@@ -202,6 +205,7 @@ export class Game {
           },
         };
         for (const e of enemies) e.update(dt, ctxE);
+        Infected.updateFx(dt);
         // oggetti mobili (carrelli): fisica semplice, ostacoli = muri/scaffali/altri carrelli
         for (const m of level.movables) {
           if (!m.moving) continue;

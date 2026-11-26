@@ -32,9 +32,16 @@ def build_animations(arm, arm_drop_deg=None):
     # orientamento di riposo di ogni osso in coordinate mondo (con il pose a zero)
     REST = {pb.name: (arm.matrix_world @ pb.bone.matrix_local).to_quaternion().to_matrix() for pb in arm.pose.bones}
     def rotw(bone, axis, ang_deg):
-        """Compone una rotazione di ang_deg gradi attorno all'asse MONDO `axis` (regola della mano destra) sull'osso."""
+        """Compone una rotazione di ang_deg gradi attorno all'asse MONDO `axis` (regola della mano destra) sull'osso.
+        Tiene conto della posa già applicata ai genitori (altrimenti, p.es., il gomito dopo l'abbassamento del braccio ruoterebbe attorno
+        a un asse sbagliato e l'avambraccio si torcerebbe invece di piegarsi)."""
+        pb = arm.pose.bones[bone]; par = pb.parent
+        if par is not None:
+            upd()
+            Wp = (arm.matrix_world @ par.matrix).to_quaternion().to_matrix() @ REST[par.name].inverted()
+            axis = Wp.inverted() @ axis
         a = (REST[bone].inverted() @ axis).normalized()
-        pb = arm.pose.bones[bone]; pb.rotation_quaternion = Quaternion(a, math.radians(ang_deg)) @ pb.rotation_quaternion      # pre-moltiplica: l'asse resta quello del mondo
+        pb.rotation_quaternion = Quaternion(a, math.radians(ang_deg)) @ pb.rotation_quaternion
     def flex(bone, deg): rotw(bone, right, deg)                 # + = l'estremità distale va in AVANTI (piede: punta in su)
     def tilt(bone, deg): rotw(bone, right, -deg)                # per ossa che puntano in SU (spina, collo, testa): + = si piega in AVANTI
     def yaw(bone, deg): rotw(bone, up, deg)                     # + = gira verso sinistra
@@ -143,8 +150,8 @@ def build_animations(arm, arm_drop_deg=None):
         roll("head.x", head_roll * math.sin(2 * math.pi * ph * 2))
         shift("root.x", right * (-shoulder_sway * sn))   # sposta il peso sul piede d'appoggio
         ground(lift * (0.5 + 0.5 * math.cos(4 * math.pi * ph)) if flight else 0.0)
-    def walk(ph, f, n): gait(ph, 0.9, 0.95, 0, 4, 18, 20, 4.5, 2.6, 5.5, 0.018, 0, 6, 1.2)
-    def run(ph, f, n): gait(ph, 1.45, 1.55, 0, 16, 70, 40, 8, 3, 9, 0.012, 0.05, 6, 1.5, flight=1.0)
+    def walk(ph, f, n): gait(ph, 0.9, 0.95, 0, 4, 10, 17, 4.5, 2.6, 5.5, 0.018, 0, 6, 1.2)
+    def run(ph, f, n): gait(ph, 1.45, 1.55, 0, 16, 52, 38, 8, 3, 9, 0.012, 0.05, 6, 1.5, flight=1.0)
 
     # ---------------------------------------------------------------------------------------------------------------------------
     def idle(ph, f, n):
@@ -210,9 +217,26 @@ def build_animations(arm, arm_drop_deg=None):
         low = min(min(wh(pb.name).z, wt(pb.name).z) for pb in arm.pose.bones)
         shift("root.x", up * (GROUND + 0.11 * fall - low)); upd()
 
+    def aim_base(ph):
+        """Posa di tiro a due mani: braccio destro teso verso il bersaglio con la pistola, sinistro piegato a sostenere, busto di tre quarti."""
+        b = math.sin(2 * math.pi * ph)
+        flex("arm_stretch.r", 88 + 0.8 * b); flex("forearm_stretch.r", 6); abd("arm_stretch.r", "r", -2); yaw("arm_stretch.r", 17)
+        flex("arm_stretch.l", 74 + 0.6 * b); flex("forearm_stretch.l", 20); yaw("arm_stretch.l", -20)
+        yaw("root.x", -6); yaw("spine_02.x", -8); yaw("spine_03.x", -4); tilt("spine_02.x", 3); tilt("neck.x", -10); tilt("head.x", -3); roll("head.x", 6)
+        flex("thigh_stretch.l", 12); flex("leg_stretch.l", -9); flex("thigh_stretch.r", -9); flex("leg_stretch.r", -7)
+        roll("spine_02.x", 0.6 * b); tilt("spine_03.x", 0.6 * b)
+    def aim(ph, f, n):
+        aim_base(ph); ground()
+    def fire(ph, f, n):
+        aim_base(0.0)
+        e = (ph / 0.15 if ph < 0.15 else (1 - ph) ** 2 / (0.85 ** 2)) if ph > 0 else 0.0
+        flex("arm_stretch.r", 10 * e); flex("forearm_stretch.r", 7 * e); flex("arm_stretch.l", 6 * e)
+        tilt("spine_02.x", -3 * e); tilt("spine_03.x", -3 * e); tilt("neck.x", 2 * e); shift("root.x", fwd * (-0.015 * e))
+        ground()
+
     make_action("Idle", 96, idle); make_action("Scan", 120, scan)
     make_action("Walk", 26, walk); make_action("Run", 18, run)
-    make_action("Attack", 30, attack); make_action("Hit", 14, hit); make_action("Death", 48, death)
+    make_action("Aim", 48, aim); make_action("Fire", 10, fire); make_action("Attack", 30, attack); make_action("Hit", 14, hit); make_action("Death", 48, death)
 
     # velocità di riferimento (m/s): velocità all'indietro (rispetto al bacino) del piede mentre è a terra = velocità di avanzamento del corpo
     def stride_speed(action_name, n):

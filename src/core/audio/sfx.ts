@@ -48,6 +48,11 @@ export class Sfx {
     this.noise(0.22, "lowpass", 5200, 400, 1.0, o); this.noise(0.05, "highpass", 2500, 2500, 0.7, o);
     this.tone("sine", 180, 45, 0.16, 0.9, o); this.noise(0.9, "bandpass", 900, 250, 0.12, o, 0, 0.04);
   }
+  /** Sparo di un nemico: stesso scoppio, attenuato dalla distanza e con panning. */
+  enemyShot(dist: number, pan: number): void {
+    const o = this.out(); if (!o) return; const v = Math.max(0.15, 1 - dist / 40);
+    this.noise(0.2, "lowpass", 4200, 350, 0.8 * v, o, pan); this.tone("sine", 170, 45, 0.14, 0.7 * v, o, pan); this.noise(0.6, "bandpass", 800, 250, 0.1 * v, o, pan, 0.04);
+  }
   dryFire(): void { const o = this.out(); if (o) { this.tone("square", 1800, 900, 0.03, 0.25, o); this.noise(0.03, "highpass", 3000, 3000, 0.2, o); } }
   reload(): void {
     const o = this.out(); if (!o) return;

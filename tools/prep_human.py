@@ -134,6 +134,50 @@ ang = math.degrees(math.acos(max(-1, min(1, v.dot(-up)))))      # angolo dalla v
 drop = max(0.0, ang - 10.0)
 print("ARM angle", round(ang, 1), "drop", round(drop, 1))
 speeds = build_animations(arm)
+# --- 9. pistola nella mano destra: pesata al 100% sull'osso hand.r, posizionata in modo che nella clip "Aim" punti dritta davanti ------------------------
+pistol_path = os.path.join(os.path.dirname(os.path.abspath(out)), "weapons", "SM_Pistol_M9.glb")
+before_objs = set(bpy.data.objects)
+bpy.ops.import_scene.gltf(filepath=pistol_path)
+new_objs = [o for o in bpy.data.objects if o not in before_objs]
+pms = [o for o in new_objs if o.type == "MESH"]
+for o in pms:
+    mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
+for o in new_objs:
+    if o.type != "MESH": bpy.data.objects.remove(o, do_unlink=True)
+bpy.ops.object.select_all(action="DESELECT")
+for o in pms: o.select_set(True)
+bpy.context.view_layer.objects.active = pms[0]
+if len(pms) > 1: bpy.ops.object.join()
+pistol = bpy.context.active_object
+for m in pistol.data.materials:
+    if m and m.use_nodes:
+        for n in m.node_tree.nodes:
+            if n.type == "TEX_IMAGE" and n.image and n.image.size[0] > 512: n.image.scale(512, 512)
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+hb = arm.pose.bones["hand.r"]
+aim = bpy.data.actions["Aim"]; arm.animation_data_create(); arm.animation_data.action = aim
+if getattr(aim, "slots", None) and len(aim.slots): arm.animation_data.action_slot = aim.slots[0]
+bpy.context.scene.frame_set(1); bpy.context.view_layer.update()
+P_aim = arm.matrix_world @ hb.matrix
+Hd, Tl = arm.matrix_world @ hb.head, arm.matrix_world @ hb.tail
+d = (Tl - Hd).normalized(); z = Vector((0, 0, 1)); u = (z - d * z.dot(d)).normalized()
+from mathutils import Matrix
+X = (-d).cross(u)
+rot = Matrix(((X.x, -d.x, u.x), (X.y, -d.y, u.y), (X.z, -d.z, u.z))).to_4x4()
+pos = Hd + d * 0.08 + u * 0.015
+G_aim = Matrix.Translation(pos) @ rot
+P_rest = arm.matrix_world @ hb.bone.matrix_local
+pistol.matrix_world = (P_rest @ P_aim.inverted()) @ G_aim
+bpy.context.view_layer.update()
+bpy.ops.object.select_all(action="DESELECT"); pistol.select_set(True); bpy.context.view_layer.objects.active = pistol
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+vg = pistol.vertex_groups.new(name="hand.r"); vg.add(list(range(len(pistol.data.vertices))), 1.0, "REPLACE")
+pistol.parent = None
+bpy.ops.object.select_all(action="DESELECT"); pistol.select_set(True); body.select_set(True); bpy.context.view_layer.objects.active = body
+bpy.ops.object.join()
+body = bpy.context.active_object
+arm.animation_data.action = bpy.data.actions["Idle"]
+
 bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_yup=True, export_apply=False, export_skins=True, export_animations=True,
                           export_animation_mode="ACTIONS", export_force_sampling=True, export_image_format="WEBP", export_image_quality=78)
 print("HUMAN tris", before, "->", tris, "bones", len(arm.data.bones), "actions", [a.name for a in bpy.data.actions], "speeds", speeds, os.path.getsize(out) // 1024, "KB")

@@ -11,11 +11,14 @@ import type { NavGrid, Pt } from "../ai/nav-grid";
 import { angleTo, canSee, detectionRange } from "../ai/perception";
 import type { Sfx } from "../../core/audio/sfx";
 import type { Damageable, HitPart } from "../combat/damageable";
+import { WeaponEffects } from "../weapons/effects";
 
-export type EnemyState = "patrol" | "chase" | "search" | "attack" | "dead";
+export type EnemyState = "patrol" | "chase" | "search" | "attack" | "shoot" | "dead";
 
 export interface EnemyContext {
   player: Vector3;
+  /** Posizione degli occhi del giocatore (bersaglio dei colpi). */
+  eye: Vector3;
   playerFlags: { torch: boolean; sprinting: boolean; crouching: boolean };
   grid: NavGrid;
   sfx: Sfx;
@@ -27,7 +30,8 @@ const FACING_OFFSET = 0;           // calibrazione: orientamento del modello ris
 const WALK_SPEED = 1.15, CHASE_SPEED = 2.5, TURN = 5;
 /** Velocità (m/s) a cui i piedi non scivolano a ratio 1 (misurata da tools/humanoid_anims.py). */
 const WALK_ANIM_V = 1.15, RUN_ANIM_V = 2.14;
-const LOOPS = ["Idle", "Scan", "Walk", "Run"], ONESHOT = ["Attack", "Hit"];
+const LOOPS = ["Idle", "Scan", "Walk", "Run", "Aim"], ONESHOT = ["Attack", "Hit", "Fire"];
+const SHOOT_MIN = 3, SHOOT_MAX = 16, FIRE_DAMAGE = 9;
 const FOV = (110 * Math.PI) / 180, SIGHT = 15, MELEE_RANGE = 1.55, MELEE_DAMAGE = 12;
 const DAMAGE: Record<HitPart, number> = { head: 60, torso: 34, legs: 22 };
 
@@ -57,6 +61,13 @@ export class Infected implements Damageable {
   private growled = false;
   private alertT = 0;
   private flashT = 0;
+  private shootT = 0;
+  private fireCd = 0;
+  private fireAnimT = 0;
+  private handNode: TransformNode | undefined;
+  /** Effetti di sparo condivisi da tutti i nemici (lampo, scia, scintille). */
+  private static shared: { fx: WeaponEffects; muzzle: TransformNode } | undefined;
+  static updateFx(dt: number): void { Infected.shared?.fx.update(dt); }
 
   private constructor(scene: Scene, readonly id: number, private readonly patrolPts: Pt[]) {
     this.root = new TransformNode(`infected${id}`, scene);
@@ -65,10 +76,12 @@ export class Infected implements Damageable {
   static create(scene: Scene, container: AssetContainer, id: number, start: Pt, patrol: Pt[], yaw = 0): Infected {
     // la pelle sotto il cappuccio resterebbe nera: una piccola quota autoilluminata (stessa texture) la tiene leggibile
     for (const m of container.materials) if (m instanceof PBRMaterial && m.name.startsWith("Std_") && m.albedoTexture && !m.emissiveTexture) { m.emissiveTexture = m.albedoTexture; m.emissiveColor = new Color3(0.2, 0.2, 0.2); }
+    if (!Infected.shared) { const muzzle = new TransformNode("enemyMuzzle", scene); Infected.shared = { fx: new WeaponEffects(scene, muzzle, 0), muzzle }; }
     const a = new Infected(scene, id, patrol);
     const inst = container.instantiateModelsToScene((n) => `${n}_a${id}`, false, { doNotInstantiate: true });
     const model = inst.rootNodes[0];
     if (model) model.parent = a.root;
+    a.handNode = a.root.getChildTransformNodes(false, (n) => n.name.startsWith("hand.r"))[0];
     for (const g of inst.animationGroups) { const n = g.name.replace(/_a\d+$/, ""); a.groups.set(n, g); }
     for (const [n, g] of a.groups) { g.stop(); if (n === "Idle") { g.start(true, 1, g.from, g.to, false); g.setWeightForAllAnimatables(1); } }
     a.root.position.set(start.x, 0, start.z); a.yaw = yaw; a.root.rotation.y = yaw + FACING_OFFSET;
@@ -122,6 +135,8 @@ export class Infected implements Damageable {
     const g = this.groups.get(name); if (g) { g.start(loop, 1, g.from, g.to, false); g.setWeightForAllAnimatables(1); if (frac !== undefined) { g.goToFrame(g.from + frac * (g.to - g.from)); g.pause(); } }
   }
   private debugHold = false;
+  /** Solo QA: orienta il nemico senza fermare l'IA. */
+  debugFace(yaw: number): void { this.yaw = yaw; this.root.rotation.y = yaw + FACING_OFFSET; }
   debugBone(name: string): unknown { const n = this.root.getChildTransformNodes(false, (x) => x.name.startsWith(name))[0]; return n ? [n.name, n.rotationQuaternion?.asArray().map((v) => +v.toFixed(3)), n.position.asArray().map((v) => +v.toFixed(3))] : null; }
   debugInfo(): unknown { return [...this.groups].map(([n, g]) => [n, g.isPlaying, g.from, g.to, g.targetedAnimations.length, +(g.animatables[0]?.masterFrame ?? -1).toFixed(1), g.speedRatio]); }
 
@@ -146,7 +161,7 @@ export class Infected implements Damageable {
       if (this.state === "patrol" || this.state === "search") {
         this.state = "chase"; this.repath = 0; this.growled = false;
       }
-    } else if (this.state === "chase") { this.lostSight += dt; if (this.lostSight > 4) { this.state = "search"; this.path = []; this.repath = 0; this.wait = 0; } }
+    } else if (this.state === "chase" || this.state === "shoot") { this.lostSight += dt; if (this.state === "shoot" && this.lostSight > 1.2) this.state = "chase"; if (this.lostSight > 4) { this.state = "search"; this.path = []; this.repath = 0; this.wait = 0; } }
     if (this.state === "chase" && !this.growled) { this.growled = true; ctx.sfx.growl(dist, Math.max(-1, Math.min(1, Math.sin(angleTo(pl, 0, me))))); }
 
     switch (this.state) {
@@ -154,6 +169,7 @@ export class Infected implements Damageable {
       case "search": this.doSearch(dt, me, ctx.grid); break;
       case "chase": this.doChase(dt, me, pl, dist, ctx); break;
       case "attack": this.doAttack(dt, me, pl, dist, ctx); break;
+      case "shoot": this.doShoot(dt, me, pl, dist, ctx); break;
       default: break;
     }
     this.blendAnimations(dt);
@@ -209,10 +225,37 @@ export class Infected implements Damageable {
     this.moving = false;
     if (!ctx.playerAlive) { this.state = "patrol"; this.path = []; return; }
     if (dist < MELEE_RANGE && this.sees && this.cooldown <= 0) { this.startAttack(dist, ctx); return; }
+    if (this.sees && dist > SHOOT_MIN && dist < SHOOT_MAX) { this.state = "shoot"; this.shootT = 0; this.fireCd = 0.55; this.path = []; return; }
     this.repath -= dt;
     const target = this.lastKnown ?? pl;
     if (this.repath <= 0) { this.repath = 0.35; this.path = ctx.grid.lineClear(me, target) ? [target] : ctx.grid.findPath(me, target); }
     if (dist > 1.1) this.followPath(dt, me, CHASE_SPEED); else this.turnTo(Math.atan2(pl.x - me.x, pl.z - me.z), dt);
+  }
+
+  /** Si ferma, punta la pistola e spara a intervalli: ogni sparo parte dalla posa di mira. */
+  private doShoot(dt: number, me: Pt, pl: Pt, dist: number, ctx: EnemyContext): void {
+    this.moving = false;
+    if (!ctx.playerAlive) { this.state = "patrol"; this.path = []; return; }
+    this.turnTo(Math.atan2(pl.x - me.x, pl.z - me.z), dt);
+    this.shootT += dt; this.fireCd -= dt; this.fireAnimT = Math.max(0, this.fireAnimT - dt);
+    if (dist < SHOOT_MIN - 0.6 || dist > SHOOT_MAX + 3) { this.state = "chase"; this.repath = 0; return; }
+    const facing = Math.abs(angleTo(me, this.yaw, pl)) < 0.2;
+    if (this.fireCd <= 0 && this.sees && facing) this.fireShot(dist, ctx);
+  }
+  private fireShot(dist: number, ctx: EnemyContext): void {
+    const sh = Infected.shared; if (!sh) return;
+    this.fireCd = 0.9 + Math.random() * 0.7; this.fireAnimT = 0.35; this.play("Fire", false, 1);
+    const hand = this.handNode?.getAbsolutePosition() ?? this.root.position.add(new Vector3(0, 1.3, 0));
+    const dir = ctx.eye.subtract(hand).normalize();
+    const origin = hand.add(dir.scale(0.28));
+    const crouch = ctx.playerFlags.crouching ? 0.8 : 1, run = ctx.playerFlags.sprinting ? 0.7 : 1;
+    const hit = Math.random() < Math.max(0.15, Math.min(0.65, 0.8 - dist * 0.045)) * crouch * run;
+    const side = new Vector3(-dir.z, 0, dir.x).normalize();
+    const end = hit ? ctx.eye.clone() : ctx.eye.add(side.scale((Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random())).add(new Vector3(0, (Math.random() - 0.5) * 0.8, 0)));
+    sh.muzzle.position.copyFrom(origin); sh.fx.muzzleFlash(); sh.fx.tracer(origin, end.add(end.subtract(origin).normalize().scale(10)));
+    const pan = Math.max(-1, Math.min(1, Math.sin(angleTo({ x: ctx.player.x, z: ctx.player.z }, 0, { x: this.root.position.x, z: this.root.position.z }))));
+    ctx.sfx.enemyShot(dist, pan);
+    if (hit && ctx.playerAlive) ctx.hurtPlayer(FIRE_DAMAGE, this.root.position);
   }
 
   private startAttack(dist: number, ctx: EnemyContext): void {
@@ -231,6 +274,7 @@ export class Infected implements Damageable {
     let want = "Idle";
     if (this.hitT > 0) want = "Hit";
     else if (this.state === "attack") want = "Attack";
+    else if (this.state === "shoot") want = this.fireAnimT > 0 ? "Fire" : "Aim";
     else if (this.moving) want = this.state === "chase" ? "Run" : "Walk";
     else if (this.scanning && this.state === "search") want = "Scan";
     for (const n of [...LOOPS, ...ONESHOT]) {
