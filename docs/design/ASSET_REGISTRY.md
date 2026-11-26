@@ -20,5 +20,7 @@ Registro di provenienza e crediti. Dal 2026-11-26 (decisione 0004) la verifica d
 Scena "Supermarket" di heng1210 (97e2e393…): non scaricabile, licenza Standard Sketchfab, 2,97M facce. Escluso (eventuale riferimento visivo senza file).
 Altri modelli di Rendevr (Spider-Man, Ant-Man, Mech): personaggi di terzi con proprietà intellettuale / senza licenza esplicita, non scaricabili. Esclusi.
 
+| T14 | SM_Infected | Nemico umano realistico (fornito dall'AD), ~21k tri, 22 ossa, 7 animazioni | `tools/prep_human.py` + `tools/humanoid_anims.py` | Integrato |
+
 ## Crediti obbligatori (schermata crediti)
 "Supermarket Potato Chips Shelf Asset" e "Supermarket Drinks Shelf Asset" di Rendevr; "Food pack" di Pasha; "New Supermarket Trolley" di kreems; "Supermarket Milk Trolley FREE" di LordSamueliSolo (Lady Lion Studios); "Lowpoly Store/Supermarket Props" di AspectStudios; tutti CC BY 4.0, via Sketchfab. Eventuali modifiche (decimazione, retopo, texture) vanno dichiarate come "adattato".

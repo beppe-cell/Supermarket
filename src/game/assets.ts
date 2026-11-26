@@ -4,7 +4,9 @@ import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import type { Scene } from "@babylonjs/core/scene";
 import pistolUrl from "../../assets/exported/models/weapons/SM_Pistol_M9.glb?url";
 
-const URLS: Record<string, string> = { SM_Pistol_M9: pistolUrl };
+import infectedUrl from "../../assets/exported/models/SM_Infected.glb?url";
+
+const URLS: Record<string, string> = { SM_Pistol_M9: pistolUrl, SM_Infected: infectedUrl };
 
 /** Carica un GLB come AssetContainer. In modalità `artifact` il file è un .glb.txt in base64 (l'hosting non serve .glb). */
 export async function loadModel(scene: Scene, key: keyof typeof URLS & string): Promise<AssetContainer> {

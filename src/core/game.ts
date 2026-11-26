@@ -19,7 +19,10 @@ import { Objectives } from "../game/inventory/objectives";
 import { createEnvironment } from "./environment";
 import { createPostFx } from "./postfx";
 import { Sfx } from "./audio/sfx";
+import { loadModel } from "../game/assets";
 import { Pistol, type HitReport } from "../game/weapons/pistol";
+import { Infected } from "../game/enemies/infected";
+import { buildZone1Nav } from "../game/levels/zone1-nav";
 import type { Interactable } from "../game/interaction/interactable";
 
 const REACH = 2.4;
@@ -62,7 +65,13 @@ export class Game {
     const sfx = new Sfx(); sfx.setVolume(settings.volume);
     const wake = () => sfx.resume();
     addEventListener("pointerdown", wake); addEventListener("keydown", wake); addEventListener("touchstart", wake);
+    const grid = buildZone1Nav();
     const pistol = await Pistol.create(scene, player.camera, sfx, this.quality.maxDynamicLights);
+    const infectedModel = await loadModel(scene, "SM_Infected");
+    const enemies = [
+      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -3 }, { x: -4.4, z: -8 }, { x: -8.8, z: -8 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
+      Infected.create(scene, infectedModel, 2, { x: 8.8, z: -4 }, [{ x: 8.8, z: 9 }, { x: 13.2, z: 9.5 }, { x: 13.2, z: -3 }, { x: 8.8, z: -8 }, { x: 4.4, z: -8 }], 0),
+    ].slice(0, this.quality.maxActiveEnemies >= 2 ? 2 : 1);
 
     // --- HUD, inventario, obiettivi ---
     const hud = new Hud(document.body, dev.isTouch);
@@ -119,6 +128,11 @@ export class Game {
           scene.lights.forEach((l) => { l.intensity = Math.max(l.intensity, 1.2); });
         },
         meshes: (re: string) => scene.meshes.filter((m) => new RegExp(re).test(m.name)).slice(0, 12).map((m) => [m.name, m.isVisible, m.isEnabled(), m.getBoundingInfo().boundingBox.centerWorld.asArray().map((v) => +v.toFixed(1))]),
+        enemies: () => enemies.map((e) => [e.state, e.hp, +e.position.x.toFixed(2), +e.position.z.toFixed(2)]),
+        enemyTo: (i: number, x: number, z: number) => enemies[i]?.position.set(x, 0, z),
+        enemyBone: (i: number, n: string) => enemies[i]?.debugBone(n),
+        enemyInfo: (i: number) => enemies[i]?.debugInfo(),
+        enemyPlay: (i: number, name: string, loop: boolean, yaw?: number, frac?: number) => enemies[i]?.debugPlay(name, loop, yaw, frac),
         setFire: (v: boolean) => { dbgFire = v; },
         setReload: (v: boolean) => { dbgReload = v; },
         ammo: () => [pistol.mag, pistol.reserve],
@@ -160,7 +174,7 @@ export class Game {
         const moving = input.moveX !== 0 || input.moveY !== 0;
         const sprinting = moving && input.sprint && player.stamina.canSprint && !input.crouch;
         if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload }, { moving, sprinting }, {
-          onShot: () => { /* i nemici futuri ascolteranno lo sparo da qui */ },
+          onShot: () => { const p = { x: player.position.x, z: player.position.z }; for (const e of enemies) if (Vector3.Distance(e.position, player.position) < 32) e.hear(p); },
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {
             if (r.kind === "enemy" && r.enemy && r.part) { const killed = r.enemy.hit(r.part, { sfx, player: player.position }); hud.hitMarker(killed); }
@@ -168,6 +182,17 @@ export class Game {
             if (mv && r.point && r.dir) { mv.hit(r.dir.x, r.dir.z, r.point.x, r.point.z); sfx.rattle(Vector3.Distance(mv.collider.position, player.position)); }
           },
         });
+        const ctxE = {
+          player: player.position, grid, sfx, playerAlive: !dead,
+          playerFlags: { torch: player.torch.isEnabled(), sprinting, crouching: player.isCrouching },
+          hurtPlayer: (n: number, from: Vector3) => {
+            player.damage(n); sfx.playerHurt();
+            let a = Math.atan2(from.x - player.position.x, from.z - player.position.z) - player.yawAngle;
+            while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI;
+            hud.hurt(a);
+          },
+        };
+        for (const e of enemies) e.update(dt, ctxE);
         // oggetti mobili (carrelli): fisica semplice, ostacoli = muri/scaffali/altri carrelli
         for (const m of level.movables) {
           if (!m.moving) continue;
