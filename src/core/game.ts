@@ -76,7 +76,7 @@ export class Game {
     // --- HUD, inventario, obiettivi ---
     const hud = new Hud(document.body, dev.isTouch);
     const inventory = new Inventory(12), objectives = new Objectives();
-    let paused = false, dead = false, dbgFire = false, dbgReload = false, shownObjective = "";
+    let paused = false, dead = false, dbgFire = false, dbgAim = false, dbgReload = false, shownObjective = "";
     const syncObjective = () => { const c = objectives.current; const t = c?.text ?? "Obiettivo completato"; if (t !== shownObjective) { shownObjective = t; hud.setObjective(t, !c); } };
     inventoryUi = new InventoryUI({
       inventory, objectives, settings, qualityLabel: `${this.quality.id === "high" ? "Alta" : this.quality.id === "medium" ? "Media" : "Bassa"}${dev.isTouch ? " (30 fps adattivi)" : ""}`,
@@ -128,12 +128,14 @@ export class Game {
           scene.lights.forEach((l) => { l.intensity = Math.max(l.intensity, 1.2); });
         },
         meshes: (re: string) => scene.meshes.filter((m) => new RegExp(re).test(m.name)).slice(0, 12).map((m) => [m.name, m.isVisible, m.isEnabled(), m.getBoundingInfo().boundingBox.centerWorld.asArray().map((v) => +v.toFixed(1))]),
+        mat: (re: string, prop: string, v: unknown) => scene.materials.filter((m) => new RegExp(re).test(m.name)).map((m) => { const o = m as unknown as Record<string, unknown>; if (Array.isArray(v)) (o[prop] as { copyFromFloats(r: number, g: number, b: number): void }).copyFromFloats(v[0], v[1], v[2]); else if (v !== undefined) o[prop] = v; return [m.name, String(o[prop])]; }),
         enemies: () => enemies.map((e) => [e.state, e.hp, +e.position.x.toFixed(2), +e.position.z.toFixed(2)]),
         enemyTo: (i: number, x: number, z: number) => enemies[i]?.position.set(x, 0, z),
         enemyBone: (i: number, n: string) => enemies[i]?.debugBone(n),
         enemyInfo: (i: number) => enemies[i]?.debugInfo(),
         enemyPlay: (i: number, name: string, loop: boolean, yaw?: number, frac?: number) => enemies[i]?.debugPlay(name, loop, yaw, frac),
         setFire: (v: boolean) => { dbgFire = v; },
+        setAim: (v: boolean) => { dbgAim = v; },
         setReload: (v: boolean) => { dbgReload = v; },
         ammo: () => [pistol.mag, pistol.reserve],
         health: () => player.health,
@@ -147,12 +149,14 @@ export class Game {
     const obstacles = zone1Obstacles();
     const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
     let target: Interactable | undefined;
+    const autoCool = new Map<Interactable, number>();
     let interactHeld = false, torchHeld = false, time = 0;
     addEventListener("resize", () => this.engine.resize());
 
     this.engine.runRenderLoop(() => {
       const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
       const input = this.input.poll();
+      if (input.aim) { input.lookDX *= 0.6; input.lookDY *= 0.6; } // sensibilità ridotta in mira
       if (!paused) {
         time += dt;
         const n = step.advance(dt);
@@ -166,14 +170,19 @@ export class Game {
         const hit = scene.pickWithRay(ray, (m) => level.interactables.some((i) => i.mesh === m));
         target = hit?.pickedMesh ? level.interactables.find((i) => i.mesh === hit.pickedMesh) : undefined;
         hud.setPrompt(target && !dead ? target.prompt() : "");
-        this.input.touch?.setInteractHint(!!target);
         if (input.interact && !interactHeld && target && !dead) target.interact(ctx);
         interactHeld = input.interact;
+        // raccolta e porte automatiche: basta passarci vicino (con pausa per evitare messaggi ripetuti)
+        if (!dead) for (const it of [...level.interactables]) {
+          const a = it.auto; if (!a || (a.ready && !a.ready())) continue;
+          if ((autoCool.get(it) ?? 0) > time) continue;
+          if (Math.hypot(player.position.x - a.x, player.position.z - a.z) < a.r) { autoCool.set(it, time + 2); it.interact(ctx); }
+        }
 
         // armi e nemici
         const moving = input.moveX !== 0 || input.moveY !== 0;
         const sprinting = moving && input.sprint && player.stamina.canSprint && !input.crouch;
-        if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload }, { moving, sprinting }, {
+        if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload, aim: input.aim || dbgAim }, { moving, sprinting }, {
           onShot: () => { const p = { x: player.position.x, z: player.position.z }; for (const e of enemies) if (Vector3.Distance(e.position, player.position) < 32) e.hear(p); },
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {

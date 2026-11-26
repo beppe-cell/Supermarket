@@ -1,4 +1,6 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -61,6 +63,8 @@ export class Infected implements Damageable {
   }
 
   static create(scene: Scene, container: AssetContainer, id: number, start: Pt, patrol: Pt[], yaw = 0): Infected {
+    // la pelle sotto il cappuccio resterebbe nera: una piccola quota autoilluminata (stessa texture) la tiene leggibile
+    for (const m of container.materials) if (m instanceof PBRMaterial && m.name.startsWith("Std_") && m.albedoTexture && !m.emissiveTexture) { m.emissiveTexture = m.albedoTexture; m.emissiveColor = new Color3(0.2, 0.2, 0.2); }
     const a = new Infected(scene, id, patrol);
     const inst = container.instantiateModelsToScene((n) => `${n}_a${id}`, false, { doNotInstantiate: true });
     const model = inst.rootNodes[0];

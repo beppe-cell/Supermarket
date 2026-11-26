@@ -117,6 +117,15 @@ for im in used:
     im.file_format = "PNG" if alpha else "JPEG"
 print("IMAGES", len(used))
 
+# --- 7b. niente metallo: le mappe Metallic di CC4 non sono affidabili e rendono nera la pelle (solo roughness dalla texture) ----------------------------
+for m in body.data.materials:
+    if not (m and m.use_nodes): continue
+    for n in m.node_tree.nodes:
+        if n.type == "BSDF_PRINCIPLED":
+            sock = n.inputs["Metallic"]
+            for l in list(sock.links): m.node_tree.links.remove(l)
+            sock.default_value = 0.0
+
 # --- 8. posa base: misura l'inclinazione delle braccia (A-pose) e la riporta lungo i fianchi --------------------------------------------------
 up = Vector((0, 0, 1))
 def wpos(n): return arm.matrix_world @ arm.pose.bones[n].head

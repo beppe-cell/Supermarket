@@ -189,6 +189,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     const closedY = door.position.y;
     interactables.push({
       mesh: door,
+      auto: { x: d.x, z: d.z, r: 1.7, ready: () => !open },
       prompt: () => (locked ? `${d.label} — bloccata` : open ? `Chiudi ${d.label}` : `Apri ${d.label}`),
       interact: (ctx: InteractContext) => {
         if (locked) {
@@ -209,6 +210,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     m.position.set(p.x, p.y, p.z); m.material = pickM;
     interactables.push({
       mesh: m,
+      auto: { x: p.x, z: p.z, r: 1.3 },
       prompt: () => `Raccogli ${p.label}`,
       interact: (ctx) => { if (!ctx.addItem(p.id, p.label)) return; m.dispose(); interactables.splice(interactables.findIndex((i) => i.mesh === m), 1); },
     });

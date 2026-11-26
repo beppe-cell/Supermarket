@@ -12,6 +12,9 @@ import { WeaponEffects } from "./effects";
 
 export const MAG_SIZE = 15;
 const FIRE_INTERVAL = 0.17, RELOAD_TIME = 1.7, RANGE = 80;
+const HIP_FOV = 1.2, AIM_FOV = 0.9;
+/** Posizione del viewmodel in mira: la tacca di mira davanti all'occhio, al centro. */
+const AIM_POS = new Vector3(0, -0.095, 0.27);
 const MUZZLE = new Vector3(0, 0.07, 0.19); // dal JSON di prep_weapon (coordinate glTF)
 
 export interface HitReport {
@@ -30,6 +33,8 @@ export class Pistol {
   /** 0..1: calore di fuoco recente, allarga il mirino. */
   heat = 0;
   private bobT = 0;
+  /** 0..1: quanto la pistola è in posizione di mira. */
+  private aimT = 0;
   private prevFire = false;
   private prevReload = false;
   private readonly vm: TransformNode;
@@ -61,7 +66,7 @@ export class Pistol {
    * Aggiorna il viewmodel e gestisce sparo/ricarica. `fire` è il tasto premuto (si spara sul fronte di salita, semiautomatica).
    * `onShot` riceve il rumore dello sparo (per allertare i nemici); `trace` risolve il colpo contro il mondo.
    */
-  update(dt: number, input: { fire: boolean; reload: boolean }, state: { moving: boolean; sprinting: boolean }, hooks: {
+  update(dt: number, input: { fire: boolean; reload: boolean; aim?: boolean }, state: { moving: boolean; sprinting: boolean }, hooks: {
     onShot(): void; onRecoil(pitch: number, yaw: number): void; onReport(r: HitReport): void;
   }): void {
     this.cooldown = Math.max(0, this.cooldown - dt);
@@ -79,12 +84,16 @@ export class Pistol {
     // animazione del viewmodel: rinculo a molla, bob, abbassamento in corsa/ricarica
     this.kick = Math.max(0, this.kick - dt * 9); this.heat = Math.max(0, this.heat - dt * 2.2);
     this.bobT += dt * (state.moving ? (state.sprinting ? 11 : 7) : 1.5);
-    const amp = state.moving ? 0.006 : 0.0015;
+    const wantAim = !!input.aim && !state.sprinting && this.reloadT <= 0;
+    this.aimT += ((wantAim ? 1 : 0) - this.aimT) * Math.min(1, dt * 12);
+    const a = this.aimT, hip = 1 - a;
+    this.camera.fov = HIP_FOV + (AIM_FOV - HIP_FOV) * a;
+    const amp = (state.moving ? 0.006 : 0.0015) * (1 - 0.7 * a);
     const lower = this.reloadT > 0 ? Math.sin(Math.min(1, (RELOAD_TIME - this.reloadT) / RELOAD_TIME) * Math.PI) : 0;
     const sprint = state.sprinting ? 1 : 0;
     const k = this.kick * this.kick;
-    this.vm.position.set(0.13 + Math.sin(this.bobT * 0.5) * amp - sprint * 0.04, -0.14 + Math.abs(Math.cos(this.bobT * 0.5)) * amp - lower * 0.16 - sprint * 0.07, 0.3 - k * 0.055);
-    this.vm.rotation.set(0.02 - k * 0.22 + lower * 0.9 + sprint * 0.55, -0.04 - sprint * 0.35, lower * 0.25 + Math.sin(this.bobT * 0.5) * amp * 2);
+    this.vm.position.set(AIM_POS.x * a + (0.13 + Math.sin(this.bobT * 0.5) * amp - sprint * 0.04) * hip, AIM_POS.y * a + (-0.14 + Math.abs(Math.cos(this.bobT * 0.5)) * amp - lower * 0.16 - sprint * 0.07) * hip + Math.abs(Math.cos(this.bobT * 0.5)) * amp * a, AIM_POS.z * a + 0.3 * hip - k * 0.055);
+    this.vm.rotation.set(0.02 * hip - k * 0.22 + lower * 0.9 + sprint * 0.55, -0.04 * hip - sprint * 0.35, lower * 0.25 + Math.sin(this.bobT * 0.5) * amp * 2);
     this.fx.update(dt);
   }
 
@@ -94,7 +103,7 @@ export class Pistol {
     hooks.onRecoil(0.022 + Math.random() * 0.01, (Math.random() - 0.5) * 0.012);
 
     const cam = this.camera, origin = cam.globalPosition.clone(), fwd = cam.getDirection(Vector3.Forward());
-    const spread = 0.003 + (state.moving ? 0.007 : 0) + (state.sprinting ? 0.01 : 0);
+    const spread = (0.003 + (state.moving ? 0.007 : 0) + (state.sprinting ? 0.01 : 0)) * (1 - 0.65 * this.aimT);
     const right = cam.getDirection(Vector3.Right()), up = cam.getDirection(Vector3.Up());
     const dir = fwd.add(right.scale((Math.random() - 0.5) * 2 * spread)).add(up.scale((Math.random() - 0.5) * 2 * spread)).normalize();
     this.ray.origin.copyFrom(origin); this.ray.direction.copyFrom(dir); this.ray.length = RANGE;

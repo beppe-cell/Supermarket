@@ -3,7 +3,7 @@ import type { InputSource, InputState } from "./input-state";
 const ICONS: Record<string, string> = {
   fire: '<circle cx="12" cy="12" r="6.5"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>',
   reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
-  use: '<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-2-3.5a1.5 1.5 0 0 1 2.4-1.7L8 14"/>',
+  aim: '<circle cx="12" cy="12" r="8"/><path d="M12 6v3M12 15v3M6 12h3M15 12h3"/>',
   crouch: '<path d="M6 9l6 6 6-6"/><path d="M6 15l6 6 6-6"/>',
   torch: '<path d="M8 3h8l-1 6H9z"/><path d="M9 9l-1 12h8l-1-12"/><path d="M12 12v4"/>',
   bag: '<path d="M9 6V5a3 3 0 0 1 6 0v1"/><path d="M6 11a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M9 15h6v4H9zM4 12v5M20 12v5"/>',
@@ -39,7 +39,7 @@ export class TouchInput implements InputSource {
   private dx = 0;
   private dy = 0;
   private fire = false;
-  private interact = false;
+  private aim = false;
   private reload = false;
   private torch = false;
   private crouch = false;
@@ -64,7 +64,7 @@ export class TouchInput implements InputSource {
       this.root.appendChild(el); this.btns.set(name, el); return el;
     };
     this.hold(place("fire", "", "fire", 98, 0, 0, "fire"), (v) => { this.fire = v; if (v) navigator.vibrate?.(12); });
-    this.hold(place("use", "USA", "use", 62, 0, 118), (v) => (this.interact = v));
+    this.tap(place("aim", "MIRA", "aim", 62, 0, 118), (el) => { this.aim = !this.aim; el.classList.toggle("latched", this.aim); });
     this.hold(place("reload", "RICARICA", "reload", 58, 104, 66), (v) => { this.reload = v; });
     this.tap(place("crouch", "ABBASSA", "crouch", 54, 122, -14), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
     this.hold(place("torch", "TORCIA", "torch", 54, 190, 48), (v) => (this.torch = v));
@@ -98,11 +98,9 @@ export class TouchInput implements InputSource {
   }
 
   setVisible(v: boolean): void { this.root.classList.toggle("hidden", !v); if (!v) this.release(); }
-  /** Evidenzia il pulsante USA quando c'è qualcosa con cui interagire. */
-  setInteractHint(v: boolean): void { this.btns.get("use")?.classList.toggle("hint", v); }
 
   private release(): void {
-    this.moveId = this.lookId = -1; this.mx = this.my = 0; this.sprint = false; this.fire = this.interact = this.reload = this.torch = false; this.base.style.display = "none";
+    this.moveId = this.lookId = -1; this.mx = this.my = 0; this.sprint = false; this.fire = this.reload = this.torch = false; this.base.style.display = "none";
     for (const el of this.btns.values()) el.classList.remove("on");
   }
 
@@ -151,7 +149,7 @@ export class TouchInput implements InputSource {
     if (this.mx !== 0 || this.my !== 0) { out.moveX = this.mx; out.moveY = this.my; }
     out.lookDX += this.dx * 1.3; out.lookDY += this.dy * 1.3; this.dx = 0; this.dy = 0;
     out.sprint ||= this.sprint; out.crouch ||= this.crouch;
-    out.fire ||= this.fire; out.interact ||= this.interact; out.torch ||= this.torch; out.reload ||= this.reload;
+    out.fire ||= this.fire; out.aim ||= this.aim; out.torch ||= this.torch; out.reload ||= this.reload;
   }
 
   dispose(): void { this.abort.abort(); this.root.remove(); }

@@ -4,6 +4,8 @@ export interface Interactable {
   mesh: AbstractMesh;
   prompt(): string;
   interact(ctx: InteractContext): void;
+  /** Se presente: scatta da solo quando il giocatore entra nel raggio `r` (m) attorno a (x,z) e `ready()` (se dato) è vero. */
+  auto?: { x: number; z: number; r: number; ready?: () => boolean };
 }
 
 export interface InteractContext {

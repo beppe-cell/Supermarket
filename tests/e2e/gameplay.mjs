@@ -40,9 +40,9 @@ check("percorre la corsia scaffali", a1[2] - a0[2] > 1.0 && Math.abs(a1[0] + 13.
 await page.evaluate(() => window.__dbg.teleport(4.4, -5.2));
 await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
 await page.waitForTimeout(500);
-await page.keyboard.press("KeyE"); await page.waitForTimeout(300);
+await page.waitForTimeout(500);
 const inv = await page.evaluate(() => window.__dbg.inventory());
-check("raccoglie oggetto con E", inv.includes("batteries"), JSON.stringify(inv));
+check("raccoglie oggetto passandoci vicino", inv.includes("batteries"), JSON.stringify(inv));
 // carrello colpito da un proiettile: si deve muovere
 await page.evaluate(() => { window.__dbg.teleport(4.4, -3.6); window.__dbg.look(0, Math.atan2(1.65 - 0.5, 3.0)); });
 await page.waitForTimeout(400);
