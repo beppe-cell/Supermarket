@@ -4,6 +4,7 @@ import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { createEngine } from "./engine-factory";
+import { Loader } from "./loader";
 import { FixedTimestep } from "./fixed-timestep";
 import { InputManager } from "./input/input-manager";
 import { QUALITY_PROFILES, adaptScaling, detectQuality, profileFor, readDeviceInfo, type QualityId, type QualityProfile } from "./quality";
@@ -41,6 +42,7 @@ export class Game {
 
   async start(): Promise<void> {
     const params = new URLSearchParams(location.search);
+    const loader = new Loader(); loader.set(0.05, "Motore grafico");
     this.engine = await createEngine(this.canvas, { preferWebGPU: params.get("gpu") === "1" });
     const dev = readDeviceInfo({ maxTextureSize: this.engine.getCaps().maxTextureSize });
     // Override: ?quality=low|medium|high oppure #low|#medium|#high (l'Artifact accetta solo l'hash)
@@ -53,9 +55,11 @@ export class Game {
     const settings = loadSettings();
     let inventoryUi: InventoryUI | undefined;
     this.input = new InputManager(this.canvas, dev.isTouch, settings, () => inventoryUi?.toggle());
+    loader.set(0.15, "Livello e oggetti");
     const look = pickLook(params.get("look") ?? location.hash.slice(1));
     const level = await buildZone1(this.engine, this.quality, look);
     const scene = level.scene;
+    loader.set(0.5, "Illuminazione e riflessi");
     const envOk = params.get("env") === "0" ? false : await createEnvironment(scene, dev.isTouch ? 16 : 32);
     const player = new Player(scene, ZONE1.spawn, look.torchIntensity);
     const fx = params.get("fx") === "0" ? undefined : createPostFx(scene, player.camera, this.quality, dev.isTouch);
@@ -66,8 +70,10 @@ export class Game {
     const wake = () => sfx.resume();
     addEventListener("pointerdown", wake); addEventListener("keydown", wake); addEventListener("touchstart", wake);
     const grid = buildZone1Nav();
+    loader.set(0.65, "Arma");
     const pistol = await Pistol.create(scene, player.camera, sfx, this.quality.maxDynamicLights);
     const pistolRef = pistol;
+    loader.set(0.75, "Nemici");
     const infectedModel = await loadModel(scene, "SM_Infected");
     const enemies = [
       Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -3 }, { x: -4.4, z: -8 }, { x: -8.8, z: -8 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
@@ -148,6 +154,8 @@ export class Game {
       });
     }
 
+    loader.set(0.9, "Compilazione shader");
+    await scene.whenReadyAsync();
     const step = new FixedTimestep(1 / 60);
     const obstacles = zone1Obstacles();
     const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
@@ -156,6 +164,7 @@ export class Game {
     let interactHeld = false, torchHeld = false, time = 0;
     addEventListener("resize", () => this.engine.resize());
 
+    let framesShown = 0;
     this.engine.runRenderLoop(() => {
       const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
       const input = this.input.poll();
@@ -223,6 +232,7 @@ export class Game {
       // Suggerimento "clicca per giocare" quando il mouse non è catturato (solo desktop)
       hud.setLockHint(!dev.isTouch && !paused && !dead && document.pointerLockElement !== this.canvas);
       scene.render();
+      if (framesShown < 3 && ++framesShown === 3) loader.done(); // dopo i primi frame (shader e texture già pronti)
       this.tickDebug(dt, scene.getActiveMeshes().length, hud);
     });
   }

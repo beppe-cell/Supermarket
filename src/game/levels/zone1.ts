@@ -8,7 +8,7 @@ export const ZONE1 = {
   id: "z1",
   bounds: { minX: -20, maxX: 20, minZ: -15, maxZ: 15 },
   ceiling: 3.6,
-  spawn: { x: 0, z: -12, yaw: 0 },
+  spawn: { x: -4.4, z: -12, yaw: 0 }, // in asse con la corsia x=-4.4, lontano dai pilastri
   /** Muri perimetrali e interni: centro + dimensioni. */
   walls: [
     { x: 0, z: 15, w: 40, d: 0.4 }, // nord (reparto frigo)
