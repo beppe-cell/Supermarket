@@ -5,7 +5,7 @@ Regola: ogni asset esterno ha autore, URL, licenza, data di verifica e uso. Lice
 |---|---|---|---|---|---|---|---|
 | T01 | Supermarket Potato Chips Shelf Asset | Rendevr (https://sketchfab.com/Rendevr) | https://sketchfab.com/3d-models/supermarket-potato-chips-shelf-asset-4e4ccc3074f0474bbfa23611c46a4029 | CC-BY 4.0 | 2026-11-26 (API Sketchfab) | 41.006 | Da scaricare dall'Art Director |
 | T02 | Supermarket Drinks Shelf Asset | Rendevr | https://sketchfab.com/Rendevr (uid 4f22309b…) | CC-BY 4.0 | 2026-11-26 (API Sketchfab) | 105.652 | Da scaricare dall'Art Director |
-| T03 | Lowpoly Store/Supermarket Props (pack: frigoriferi, arredi, props) | AspectStudios (https://sketchfab.com/AspectStudio) | https://sketchfab.com/3d-models/lowpoly-storesupermarket-props-c0bd4a497dce4e77a62b905743f791fb | CC-BY 4.0 | 2026-11-26 (API Sketchfab) | 5.844 totali | Da scaricare dall'Art Director; contenuto da ispezionare |
+| T03 | Lowpoly Store/Supermarket Props (pack: frigoriferi, arredi, props) | AspectStudios (https://sketchfab.com/AspectStudio) | https://sketchfab.com/3d-models/lowpoly-storesupermarket-props-c0bd4a497dce4e77a62b905743f791fb | CC-BY 4.0 | 2026-11-26 (API Sketchfab) | 5.844 totali | Scaricato (`assets/exported/models/lowpoly_storesupermarket_props.glb`, originale intatto). Pulito con `tools/clean_props_pack.py` → `assets/exported/models/environment/props_pack_clean.glb` (18 pezzi, 2.2k tri, 1 materiale/texture 512px). In uso in Z1 come PLACEHOLDER (stile lowpoly a colori piatti ≠ look realistico approvato) |
 
 ## Non utilizzabili
 Scena "Supermarket" di heng1210 (97e2e393…): non scaricabile, licenza Standard Sketchfab, 2,97M facce. Escluso (eventuale riferimento visivo senza file).

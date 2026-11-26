@@ -35,7 +35,7 @@ export class Game {
 
     this.input = new InputManager(this.canvas, dev.isTouch);
     const look = pickLook(params.get("look") ?? location.hash.slice(1));
-    const level = buildZone1(this.engine, this.quality, look);
+    const level = await buildZone1(this.engine, this.quality, look);
     const scene = level.scene;
     const player = new Player(scene, ZONE1.spawn, look.torchIntensity);
     const hud = new Hud();
@@ -62,6 +62,7 @@ export class Game {
         inventory: () => [...this.inventory.keys()],
         teleport: (x: number, z: number) => player.teleport(x, z),
         look: (yaw: number, pitch: number) => player.setLook(yaw, pitch),
+        meshes: (re: string) => scene.meshes.filter((m) => new RegExp(re).test(m.name)).slice(0, 12).map((m) => [m.name, m.isVisible, m.isEnabled(), m.getBoundingInfo().boundingBox.centerWorld.asArray().map((v) => +v.toFixed(1))]),
       };
     }
     addEventListener("resize", () => this.engine.resize());

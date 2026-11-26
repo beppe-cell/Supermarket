@@ -14,6 +14,7 @@ import type { QualityProfile } from "../../core/quality";
 import type { InteractContext, Interactable } from "../interaction/interactable";
 import { ZONE1, type Box } from "./zone1";
 import type { LookPreset } from "./look";
+import { Props } from "./props";
 
 export interface BuiltLevel {
   scene: Scene;
@@ -30,7 +31,7 @@ function mat(scene: Scene, name: string, hex: string, emissive = false): Standar
 }
 
 /** Costruisce Z1 in greybox: geometria statica unita per materiale (poche draw call), collisioni attive. */
-export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, look: LookPreset): BuiltLevel {
+export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, look: LookPreset): Promise<BuiltLevel> {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(look.clear[0], look.clear[1], look.clear[2], 1);
   scene.fogMode = Scene.FOGMODE_EXP2;
@@ -59,7 +60,7 @@ export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, loo
   const ceiling = MeshBuilder.CreateGround("ceiling", { width: W, height: D }, scene);
   ceiling.position.y = ZONE1.ceiling; ceiling.rotation.x = Math.PI; ceiling.material = ceilM;
 
-  const boxes = (list: Box[], name: string, m: StandardMaterial, defaultH = ZONE1.ceiling) => {
+  const boxes = (list: Box[], name: string, m: StandardMaterial, defaultH = ZONE1.ceiling): Mesh | undefined => {
     const parts = list.map((bx, i) => {
       const h = bx.h ?? defaultH;
       const part = MeshBuilder.CreateBox(`${name}${i}`, { width: bx.w, depth: bx.d, height: h }, scene);
@@ -68,12 +69,13 @@ export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, loo
     });
     const merged = Mesh.MergeMeshes(parts, true, true);
     if (merged) { merged.name = name; merged.material = m; merged.checkCollisions = true; merged.freezeWorldMatrix(); }
+    return merged ?? undefined;
   };
   boxes(ZONE1.walls, "walls", wallM);
-  boxes(ZONE1.shelves, "shelves", shelfM);
+  const shelvesBox = boxes(ZONE1.shelves, "shelves", shelfM);
   boxes(ZONE1.pillars, "pillars", wallM);
-  boxes(ZONE1.checkouts, "checkouts", counterM);
-  boxes(ZONE1.freezers, "freezers", freezerM);
+  const checkoutsBox = boxes(ZONE1.checkouts, "checkouts", counterM);
+  const freezersBox = boxes(ZONE1.freezers, "freezers", freezerM);
 
   // Neon (strisce emissive unite) + luci dinamiche limitate dal profilo
   const strips = ZONE1.neons.map((n, i) => {
@@ -141,6 +143,15 @@ export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, loo
     });
   }
 
+  // Props reali (se il caricamento fallisce restano i box grigi visibili)
+  try {
+    const props = await Props.load(scene);
+    placeProps(props);
+    for (const m of [shelvesBox, checkoutsBox, freezersBox]) if (m) m.isVisible = false; // restano come collisioni
+  } catch (e) {
+    console.warn("Props non caricati, uso greybox:", e);
+  }
+
   const flicker = (t: number) => {
     for (const { l, base, seed } of lights) {
       const n = Math.sin(t * 3.1 + seed) * Math.sin(t * 7.7 + seed * 1.7);
@@ -149,4 +160,28 @@ export function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfile, loo
     }
   };
   return { scene, interactables, flicker };
+}
+
+/** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */
+function placeProps(props: Props): void {
+  const SHELF_W = 1.72;
+  for (const sh of ZONE1.shelves) {
+    const n = Math.floor(sh.d / SHELF_W);
+    const z0 = sh.z - (n * SHELF_W) / 2 + SHELF_W / 2;
+    for (let i = 0; i < n; i++) {
+      const z = z0 + i * SHELF_W;
+      props.spawn("SM_Shelf", sh.x - 0.32, z, -Math.PI / 2);
+      props.spawn("SM_Shelf", sh.x + 0.32, z, Math.PI / 2);
+    }
+  }
+  for (const f of ZONE1.freezers) {
+    const n = Math.floor(f.w / 1.6);
+    for (let i = 0; i < n; i++) props.spawn("SM_Fridge", f.x - ((n - 1) * 1.6) / 2 + i * 1.6, f.z - 0.2, Math.PI);
+  }
+  for (const c of ZONE1.checkouts) {
+    props.spawn("SM_Counter", c.x, c.z, Math.PI / 2);
+    props.spawn("SM_Register", c.x, c.z, Math.PI / 2, 0.857);
+  }
+  // Scatoloni lungo il muro ovest (posizioni fisse, nessun random)
+  [-12, -9, -4, 0, 5, 9, 12].forEach((z, i) => props.spawn(i % 2 ? "SM_Box_Closed" : "SM_Box_Open", -19.3, z, i * 0.4));
 }

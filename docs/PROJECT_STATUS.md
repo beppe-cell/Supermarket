@@ -18,3 +18,9 @@
 - Test: 20 unit (stamina, dati livello, fixed timestep, qualità) + e2e smoke (desktop/mobile) + e2e gameplay (movimento, collisione muro, pickup) tutti OK.
 - Da fare/limiti: greybox senza arte né materiali PBR; nessun combattimento/nemici; zona 2 non costruita; test su dispositivi reali (iOS/Android) e fps reali non misurati; porte scorrono in verticale (placeholder); inventario solo elenco.
 - Prossimo: M2 pipeline asset + kit ambiente + look (richiede Blender via sessione locale e revisione artistica dell'Art Director).
+
+## M2 — avanzamento (2026-11-26)
+- Look C approvato (decisione 0002).
+- Asset T03 (AspectStudios, CC-BY) importato e ripulito via bpy headless (`tools/clean_props_pack.py`); caricato in Z1 con istanze (scaffali 144, frigoriferi, banconi+casse, scatoloni); i box grigi restano come collisioni invisibili.
+- ATTENZIONE: lo stile del pack (lowpoly, colori piatti arancio/rosso) non corrisponde al look realistico approvato → placeholder; serve ri-texturing PBR in Blender o sostituzione. Decisione dell'Art Director.
+- Aperti: SM_Shelf_Unit da zero (in coda alla sessione locale, Blender non connesso); scaffali senza prodotti; post-processing look C; bordo cono torcia.
