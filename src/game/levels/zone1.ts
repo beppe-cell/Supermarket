@@ -22,17 +22,17 @@ export const ZONE1 = {
     { id: "door-warehouse", x: 20, z: 0, w: 4, axis: "z", locked: true, label: "Porta magazzino" },
     { id: "door-entrance", x: -15, z: -15, w: 4, axis: "x", locked: true, label: "Ingresso (chiuso)" },
   ] as DoorDef[],
-  /** Scaffali: 8 corsie nord-sud. */
-  shelves: Array.from({ length: 8 }, (_, i): Box => ({ x: -14 + i * 3.6, z: 3, w: 0.9, d: 16, h: 2.0 })),
+  /** Scaffali: 8 blocchi schiena contro schiena (largh. 1.3 m), passo 4.4 m => corsie libere di 3.1 m. */
+  shelves: Array.from({ length: 8 }, (_, i): Box => ({ x: -15.4 + i * 4.4, z: 3, w: 1.3, d: 16, h: 2.0 })),
   pillars: [-10, 0, 10].flatMap((x) => [-10, 10].map((z): Box => ({ x, z, w: 0.8, d: 0.8, h: 3.6 }))),
   checkouts: [8, 11, 14, 17].map((x): Box => ({ x: x + 0.5, z: -11, w: 0.9, d: 2.2, h: 1.0 })),
   freezers: Array.from({ length: 6 }, (_, i): Box => ({ x: -16 + i * 5.2, z: 14, w: 4.4, d: 1, h: 2.1 })),
   pickups: [
     { id: "key-warehouse", x: 1.8, y: 1.0, z: 13.2, label: "Chiave magazzino" },
-    { id: "med-1", x: -14, y: 1.2, z: -2, label: "Garze" },
-    { id: "can-1", x: -7, y: 1.2, z: 6, label: "Lattina di cibo" },
-    { id: "bat-1", x: 3, y: 1.2, z: -4, label: "Batterie" },
-    { id: "alc-1", x: 7.2, y: 1.2, z: 3, label: "Alcol" },
+    { id: "med-1", x: -13.2, y: 1.2, z: -2, label: "Garze" },
+    { id: "can-1", x: -8.8, y: 1.2, z: 6, label: "Lattina di cibo" },
+    { id: "bat-1", x: 4.4, y: 1.2, z: -4, label: "Batterie" },
+    { id: "alc-1", x: 8.8, y: 1.2, z: 3, label: "Alcol" },
   ] as PickupDef[],
   /** Neon: ogni punto genera una striscia emissiva; alcuni anche luce dinamica. */
   neons: Array.from({ length: 5 }, (_, r) => Array.from({ length: 4 }, (_, c): LightDef => ({ x: -15 + c * 10, z: -10 + r * 6 }))).flat(),

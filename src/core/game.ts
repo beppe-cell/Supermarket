@@ -1,5 +1,6 @@
 import type { Engine } from "@babylonjs/core/Engines/engine";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
+import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { createEngine } from "./engine-factory";
@@ -62,6 +63,15 @@ export class Game {
         inventory: () => [...this.inventory.keys()],
         teleport: (x: number, z: number) => player.teleport(x, z),
         look: (yaw: number, pitch: number) => player.setLook(yaw, pitch),
+        top: (x: number, z: number, h: number) => {
+          scene.fogMode = 0;
+          const c = new FreeCamera("top", new Vector3(x, h, z), scene);
+          c.rotation.set(Math.PI / 2, 0, 0);
+          c.fov = 0.9;
+          scene.activeCamera = c;
+          scene.ambientColor.set(1, 1, 1);
+          scene.lights.forEach((l) => { l.intensity = Math.max(l.intensity, 1.2); });
+        },
         meshes: (re: string) => scene.meshes.filter((m) => new RegExp(re).test(m.name)).slice(0, 12).map((m) => [m.name, m.isVisible, m.isEnabled(), m.getBoundingInfo().boundingBox.centerWorld.asArray().map((v) => +v.toFixed(1))]),
       };
     }

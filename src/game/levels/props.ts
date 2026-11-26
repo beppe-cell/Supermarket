@@ -46,6 +46,7 @@ export class Props {
     // Le istanze ereditano il nodo radice glTF (conversione mano destra->sinistra = specchio su X):
     // si compensa invertendo X e il segno dell'angolo, così `x,z,yaw` sono coordinate mondo.
     inst.position.set(-x, y, z);
+    inst.rotationQuaternion = null; // i mesh glTF usano il quaternione, che nasconderebbe `rotation`
     inst.rotation.y = -yaw;
     inst.freezeWorldMatrix();
     return inst;

@@ -170,8 +170,9 @@ function placeProps(props: Props): void {
     const z0 = sh.z - (n * SHELF_W) / 2 + SHELF_W / 2;
     for (let i = 0; i < n; i++) {
       const z = z0 + i * SHELF_W;
-      props.spawn("SM_Shelf", sh.x - 0.32, z, -Math.PI / 2);
-      props.spawn("SM_Shelf", sh.x + 0.32, z, Math.PI / 2);
+      // schiena contro schiena: fronte verso la corsia (sinistra -X, destra +X)
+      props.spawn("SM_Shelf", sh.x - 0.32, z, Math.PI / 2);
+      props.spawn("SM_Shelf", sh.x + 0.32, z, -Math.PI / 2);
     }
   }
   for (const f of ZONE1.freezers) {

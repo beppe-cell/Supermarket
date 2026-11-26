@@ -24,8 +24,16 @@ await page.keyboard.down("KeyS"); await page.waitForTimeout(2500); await page.ke
 const p2 = await page.evaluate(() => window.__dbg.pos());
 check("muro sud blocca", p2[2] > -15, `z=${p2[2].toFixed(2)}`);
 
+// corsia tra due blocchi di scaffali (x=-13.2): si deve poter percorrere in lunghezza
+await page.evaluate(() => { window.__dbg.teleport(-13.2, -3); window.__dbg.look(0, 0); });
+await page.waitForTimeout(300);
+const a0 = await page.evaluate(() => window.__dbg.pos());
+await page.keyboard.down("KeyW"); await page.waitForTimeout(3000); await page.keyboard.up("KeyW");
+const a1 = await page.evaluate(() => window.__dbg.pos());
+check("percorre la corsia scaffali", a1[2] - a0[2] > 1.0 && Math.abs(a1[0] + 13.2) < 0.5, `z ${a0[2].toFixed(1)} -> ${a1[2].toFixed(1)}, x ${a1[0].toFixed(2)}`);
+
 // pickup: vicino alla batteria, guardando avanti (+z) -> pickup a (3,1.2,-4)
-await page.evaluate(() => window.__dbg.teleport(3, -5.2));
+await page.evaluate(() => window.__dbg.teleport(4.4, -5.2));
 await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
 await page.waitForTimeout(500);
 await page.keyboard.press("KeyE"); await page.waitForTimeout(300);

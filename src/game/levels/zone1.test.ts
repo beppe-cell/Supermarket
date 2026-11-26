@@ -11,9 +11,9 @@ describe("Zone1 data", () => {
     for (const n of ZONE1.neons) expect(inside(n.x, n.z)).toBe(true);
     for (const s of ZONE1.shelves) expect(inside(s.x, s.z)).toBe(true);
   });
-  it("corsie scaffali distanziate >= 2 m (passaggio)", () => {
+  it("corsie libere >= 3 m (passaggio)", () => {
     const xs = ZONE1.shelves.map((s) => s.x).sort((a, b) => a - b);
-    for (let i = 1; i < xs.length; i++) expect((xs[i] ?? 0) - (xs[i - 1] ?? 0) - 0.9).toBeGreaterThanOrEqual(2);
+    for (let i = 1; i < xs.length; i++) expect((xs[i] ?? 0) - (xs[i - 1] ?? 0) - 1.3).toBeGreaterThanOrEqual(3);
   });
   it("id pickup e porte univoci", () => {
     const ids = [...ZONE1.pickups.map((p) => p.id), ...ZONE1.doors.map((d) => d.id)];
