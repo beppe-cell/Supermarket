@@ -1,19 +1,31 @@
-"""Genera i prodotti da scaffale (lattine, bottiglie, scatole, buste, barattoli) con etichette INVENTATE dall'atlante
-assets/source/labels_atlas.png. Origine al centro-base, fronte -Y. Uso: python tools/make_products.py <atlas.png> <out.glb>"""
+"""Genera i prodotti da scaffale (lattine, bottiglie, barattoli, scatole, buste) con etichette dall'atlante 4x4
+(assets/source/labels/labels_atlas_gemini.jpg, ordine celle = id tile). Ogni prodotto usa un RETTANGOLO di etichetta
+(ritaglio della zona stampata) mappato sulla parte frontale; lati, fondi e tappi usano il colore di sfondo della cella.
+Origine al centro-base, fronte -Y. Uso: python tools/make_products.py <atlas.jpg> <out.glb>"""
 import bpy, bmesh, sys, math, os
 
 atlas, out = sys.argv[-2], sys.argv[-1]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 img = bpy.data.images.load(atlas); img.pack()
+AW, AH = img.size
 mat = bpy.data.materials.new("M_Products"); mat.use_nodes = True
 nt = mat.node_tree; p = nt.nodes["Principled BSDF"]; t = nt.nodes.new("ShaderNodeTexImage"); t.image = img
 nt.links.new(t.outputs["Color"], p.inputs["Base Color"]); p.inputs["Roughness"].default_value = 0.5; p.inputs["Metallic"].default_value = 0.0
 
-def tile_uv(tile, u, v):
-    """u,v in [0,1] dentro il tile -> UV atlas (origine in basso)."""
-    col, row = tile % 4, tile // 4
-    return ((col + u) / 4.0, 1.0 - (row + 1 - v) / 4.0 - 0.0)
+# Zona stampata di ogni cella (px nell'atlante di riferimento 1024x1024): x0, y0, x1, y1 (origine in alto a sinistra)
+RECTS = [(48, 45, 208, 215), (296, 45, 466, 215), (557, 45, 722, 215), (774, 72, 1018, 192),
+         (48, 292, 208, 478), (302, 280, 466, 492), (524, 266, 758, 500), (814, 276, 972, 494),
+         (44, 532, 212, 748), (302, 574, 466, 740), (560, 568, 720, 742), (824, 524, 970, 764),
+         (6, 774, 250, 1018), (294, 792, 462, 1000), (570, 774, 712, 1018), (820, 792, 972, 1002)]
+K = AW / 1024.0
+
+def uv_label(tile, u, v):
+    x0, y0, x1, y1 = RECTS[tile]
+    x = (x0 + u * (x1 - x0)) * K; y = (y0 + (1 - v) * (y1 - y0)) * K
+    return (x / AW, 1.0 - y / AH)
+def uv_flat(tile):
+    return ((tile % 4 * 256 + 5) * K / AW, 1.0 - ((tile // 4) * 256 + 5) * K / AH)
 
 def new_obj(name, bm):
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
@@ -21,15 +33,26 @@ def new_obj(name, bm):
     for poly in me.polygons: poly.use_smooth = name.split("_")[2] in ("Can", "Bottle", "Jar")
     return o
 
-def lathe(name, profile, seg, tile, label_span):
+def lathe(name, profile, seg, tile, label_span, arc=math.pi):
+    """Solido di rivoluzione. L'etichetta copre un arco frontale (≤180°) e un'altezza coerente con le proporzioni del ritaglio."""
+    r = profile[label_span][0]; h0 = profile[label_span][1]; h1 = profile[label_span + 1][1]
+    x0, y0, x1, y1 = RECTS[tile]; aspect = (x1 - x0) / (y1 - y0)
+    W = r * arc; H = W / aspect
+    if H > h1 - h0: H = h1 - h0; W = H * aspect; arc = W / r
+    if H < (h1 - h0) - 1e-6:
+        ha = h0 + ((h1 - h0) - H) / 2
+        profile = profile[:label_span + 1] + [(r, ha), (r, ha + H)] + profile[label_span + 1:]
+        label_span += 1
     bm = bmesh.new(); uvl = bm.loops.layers.uv.new("UVMap")
-    rings = []
-    for (r, h) in profile:
-        ring = [bm.verts.new((r * math.cos(2 * math.pi * i / seg), -r * math.sin(2 * math.pi * i / seg), h)) for i in range(seg)] if r > 0 else [bm.verts.new((0, 0, h))]
-        rings.append(ring)
+    rings = [[bm.verts.new((rr * math.cos(2 * math.pi * i / seg), -rr * math.sin(2 * math.pi * i / seg), h)) for i in range(seg)] if rr > 0 else [bm.verts.new((0, 0, h))] for (rr, h) in profile]
+    fc = math.pi / 2
+    def delta(i):
+        d = 2 * math.pi * i / seg - fc
+        while d > math.pi: d -= 2 * math.pi
+        while d < -math.pi: d += 2 * math.pi
+        return d
     for k in range(len(profile) - 1):
-        a, b = rings[k], rings[k + 1]
-        is_label = (k == label_span)
+        a, b = rings[k], rings[k + 1]; is_label = (k == label_span)
         for i in range(seg):
             j = (i + 1) % seg
             if len(a) == 1: vs = [a[0], b[j], b[i]]
@@ -37,33 +60,28 @@ def lathe(name, profile, seg, tile, label_span):
             else: vs = [a[i], a[j], b[j], b[i]]
             try: f = bm.faces.new(vs)
             except ValueError: continue
+            in_arc = is_label and len(a) > 1 and len(b) > 1 and abs(delta(i)) <= arc / 2 + 1e-6 and abs(delta(j)) <= arc / 2 + 1e-6
             for loop in f.loops:
-                vi = loop.vert
-                if is_label and len(a) > 1 and len(b) > 1:
-                    idx = a.index(vi) if vi in a else b.index(vi)
-                    frac = (idx / seg) if not (idx == 0 and i == seg - 1) else 1.0
-                    hv = (vi.co.z - profile[k][1]) / (profile[k + 1][1] - profile[k][1])
-                    loop[uvl].uv = tile_uv(tile, 0.0625 + 0.9375 * (1 - frac), hv)
+                if in_arc:
+                    idx = a.index(loop.vert) if loop.vert in a else b.index(loop.vert)
+                    hv = (loop.vert.co.z - profile[k][1]) / (profile[k + 1][1] - profile[k][1])
+                    loop[uvl].uv = uv_label(tile, 0.5 - delta(idx) / arc, hv)
                 else:
-                    loop[uvl].uv = tile_uv(tile, 0.02, 0.5)
+                    loop[uvl].uv = uv_flat(tile)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return new_obj(name, bm)
 
 def box(name, w, d, h, tile, taper=1.0):
     bm = bmesh.new(); uvl = bm.loops.layers.uv.new("UVMap")
     x, y = w / 2, d / 2
-    def vtx(px, py, pz): s = taper if pz > 0 else 1.0; return bm.verts.new((px * s, py * s if pz > 0 else py, pz))
     b = [bm.verts.new((-x, -y, 0)), bm.verts.new((x, -y, 0)), bm.verts.new((x, y, 0)), bm.verts.new((-x, y, 0))]
     tp = [bm.verts.new((-x * taper, -y * taper, h)), bm.verts.new((x * taper, -y * taper, h)), bm.verts.new((x * taper, y * taper, h)), bm.verts.new((-x * taper, y * taper, h))]
     faces = {"front": (b[0], b[1], tp[1], tp[0]), "back": (b[2], b[3], tp[3], tp[2]), "right": (b[1], b[2], tp[2], tp[1]), "left": (b[3], b[0], tp[0], tp[3]), "top": (tp[0], tp[1], tp[2], tp[3]), "bottom": (b[3], b[2], b[1], b[0])}
-    quad = [(0.0625, 0), (1, 0), (1, 1), (0.0625, 1)]
+    quad = [(0, 0), (1, 0), (1, 1), (0, 1)]
     for fname, vs in faces.items():
         f = bm.faces.new(vs)
         for n, loop in enumerate(f.loops):
-            if fname == "front": uv = quad[n]
-            elif fname == "back": uv = quad[n]
-            else: uv = (0.02, 0.5)
-            loop[uvl].uv = tile_uv(tile, *uv)
+            loop[uvl].uv = uv_label(tile, *quad[n]) if fname in ("front", "back") else uv_flat(tile)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return new_obj(name, bm)
 

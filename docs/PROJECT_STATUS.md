@@ -41,3 +41,4 @@
 - HUD rifatto: vitali, arma/munizioni con avvisi, mirino dinamico, hit marker, prompt, toast, obiettivo, vignetta a vita bassa. Comandi touch: joystick flottante con corsa spingendo al massimo, pulsanti con icone (fuoco, usa, ricarica, abbassa, torcia, zaino), vibrazione, anti-zoom.
 - Test: 37 unit (A*, percezione, inventario, obiettivi, impostazioni, qualità…), e2e smoke/gameplay OK.
 - Limiti: nessun test su dispositivi reali; il nemico non attraversa le porte; effetti di sparo non verificati visivamente a fps reali; orientamento del modello androide non calibrato (FACING_OFFSET); nessun salvataggio.
+- Etichette prodotti (2026-11-26): atlante Gemini dell'AD (16 prodotti, marchi fittizi) ritagliato per prodotto (RETTANGOLI in `tools/make_products.py`): cilindri con etichetta su arco frontale 180° e altezza proporzionata, scatole/buste sul fronte, lati con colore di sfondo. Da fare: versione invecchiata e atlante cartoni/cartelli (prompt 2 e 3).

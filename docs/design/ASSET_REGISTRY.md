@@ -1,5 +1,5 @@
 # Registro asset di terze parti
-Regola: ogni asset esterno ha autore, URL, licenza, data di verifica e uso. Licenze ammesse: CC0, CC-BY (attribuzione obbligatoria, anche in-game nei crediti).
+Registro di provenienza e crediti. Dal 2026-11-26 (decisione 0004) la verifica delle licenze dei file forniti è responsabilità dell'Art Director. Le voci CC-BY richiedono attribuzione nei crediti del gioco.
 
 | ID | Asset | Autore | URL | Licenza | Verificata | Facce originali | Stato |
 |---|---|---|---|---|---|---|---|
@@ -14,6 +14,7 @@ Regola: ogni asset esterno ha autore, URL, licenza, data di verifica e uso. Lice
 | T09 | MetalGalvanizedSteelWorn001 (texture PBR metallo, 1K) | da confermare | da confermare | DA VERIFICARE (come T07) | — | — | `assets/source/third-party/floor-tiles/MetalGalvanizedSteelWorn001.zip`; in uso sul metallo di SM_Shelf_Unit |
 | T10 | Beretta M9 (FBX + texture PBR 2K) | da confermare | da confermare | DA VERIFICARE (nessun file di licenza nello zip; creato con 3ds Max nel 2021) | — | 6.427 | `assets/source/third-party/weapons/beretta_m9_fbx.zip`. In uso come pistola (`tools/prep_weapon.py` → `assets/exported/models/weapons/SM_Pistol_M9.glb`, texture 1K) |
 | T11 | ANDROID MAXIM-08 (ROBOT: .blend/.fbx/.obj, rig 67 ossa) | da confermare | da confermare | DA VERIFICARE (nessun file di licenza; il pacchetto include un'immagine «chinese logo.jpg» non usata) | — | 273.160 | `assets/source/third-party/enemy/ANDROID+MAXIM-08.7z`. In uso come nemico (`tools/prep_android.py`: decimato a ~20k tri, 4 animazioni create da noi). Il design dell'androide è una scelta dell'Art Director (non era nel GDD) |
+| T12 | Atlante etichette prodotti (16 confezioni con marchi fittizi) | generato dall'Art Director con Gemini | — | fornito dall'AD | 2026-11-26 | — | `assets/source/labels/labels_atlas_gemini.jpg`; ritagli in `tools/make_products.py`. Sostituisce l'atlante procedurale (`tools/make_label_atlas.py`, ancora disponibile come ripiego) |
 
 ## Non utilizzabili
 Scena "Supermarket" di heng1210 (97e2e393…): non scaricabile, licenza Standard Sketchfab, 2,97M facce. Escluso (eventuale riferimento visivo senza file).
