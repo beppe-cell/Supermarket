@@ -92,6 +92,8 @@ export interface BuiltLevel {
   interactables: Interactable[];
   movables: Movable[];
   flicker: (t: number) => void;
+  /** Aggiornamenti per frame legati alla posizione del giocatore (lampeggio tessera). */
+  tick: (t: number, px: number, pz: number) => void;
 }
 
 function mat(scene: Scene, name: string, hex: string, emissive = false): StandardMaterial {
@@ -194,8 +196,8 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
       prompt: () => (locked ? `${d.label} — bloccata` : open ? `Chiudi ${d.label}` : `Apri ${d.label}`),
       interact: (ctx: InteractContext) => {
         if (locked) {
-          if (d.id === "door-warehouse" && ctx.hasItem("key-warehouse")) { locked = false; ctx.message("Hai sbloccato la porta del magazzino."); ctx.event("warehouse_unlocked"); }
-          else { ctx.message(d.id === "door-entrance" ? "L'ingresso è sbarrato dall'esterno." : "Serve una chiave."); return; }
+          if (d.id === "door-warehouse" && ctx.hasItem("key-warehouse")) { locked = false; ctx.message("Tessera accettata: porta del magazzino sbloccata."); ctx.event("warehouse_unlocked"); }
+          else { ctx.message(d.id === "door-entrance" ? "L'ingresso è sbarrato dall'esterno." : "Serve una chiave elettronica."); return; }
         }
         open = !open;
         door.position.y = open ? closedY + 2.7 : closedY; // greybox: la porta scorre verso l'alto
@@ -204,14 +206,16 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     });
   }
 
-  // Oggetti raccoglibili (greybox: cubetti)
+  const decor = buildDecor(scene, q);
+  // Oggetti raccoglibili (greybox: cubetti; la tessera elettronica ha la sua mesh)
   const pickM = mat(scene, "pickup", "#c9b458");
   for (const p of ZONE1.pickups) {
-    const m = MeshBuilder.CreateBox(p.id, { size: 0.22 }, scene);
-    m.position.set(p.x, p.y, p.z); m.material = pickM;
+    const isKey = p.id === "key-warehouse";
+    const m = isKey ? decor.keycard : MeshBuilder.CreateBox(p.id, { size: 0.22 }, scene);
+    if (!isKey) { m.position.set(p.x, p.y, p.z); m.material = pickM; }
     interactables.push({
       mesh: m,
-      auto: { x: p.x, z: p.z, r: 1.3 },
+      auto: { x: p.x, z: p.z, r: isKey ? 1.9 : 1.3 },
       prompt: () => `Raccogli ${p.label}`,
       interact: (ctx) => { if (!ctx.addItem(p.id, p.label)) return; m.dispose(); interactables.splice(interactables.findIndex((i) => i.mesh === m), 1); },
     });
@@ -227,8 +231,6 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     console.warn("Props non caricati, uso greybox:", e);
   }
 
-  try { buildDecor(scene); } catch (e) { console.warn("Decor non costruito:", e); }
-
   const flicker = (t: number) => {
     for (const { l, base, seed } of lights) {
       const n = Math.sin(t * 3.1 + seed) * Math.sin(t * 7.7 + seed * 1.7);
@@ -236,7 +238,7 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
       l.intensity = off ? 0.05 : base * (n > 0.92 ? 0.35 : 1);
     }
   };
-  return { scene, interactables, movables, flicker };
+  return { scene, interactables, movables, flicker, tick: decor.tick };
 }
 
 /** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */

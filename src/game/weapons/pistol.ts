@@ -64,6 +64,9 @@ export class Pistol {
   get reloading(): boolean { return this.reloadT > 0; }
   get muzzleWorld(): Vector3 { return this.muzzleNode.getAbsolutePosition(); }
 
+  /** Fa partire una volta tutti gli effetti (lampo, scia, scintille, fumo) per compilare gli shader durante il caricamento, non al primo sparo. */
+  warmUp(): void { this.fx.muzzleFlash(); this.fx.impactWorld(new Vector3(0, -60, 0), Vector3.Up()); this.fx.impactEnemy(new Vector3(0, -60, 0), Vector3.Down()); this.fx.tracer(this.muzzleWorld, new Vector3(0, -60, 0)); }
+
   addAmmo(n: number): void { this.reserve += n; }
 
   /**

@@ -95,7 +95,7 @@ export class Hud {
         <div class="vrow"><span class="ico">${I.bolt}</span><div class="vbar stam"><b></b></div><span class="vnum" style="visibility:hidden">0</span></div>
       </div>
       <div class="weapon plate"><span class="wico">${I.gun}</span><div><span class="mag">15</span><span class="res">/ 30</span><div class="rl">RICARICA…</div></div></div>
-      <div class="lock plate">Clicca per giocare<br><kbd>WASD</kbd> muovi · <kbd>Shift</kbd> corri · <kbd>Ctrl</kbd> accovacciati · <kbd>R</kbd> ricarica · <kbd>F</kbd> torcia · <kbd>I</kbd> zaino</div>
+      <div class="lock plate">Clicca per giocare<br><kbd>WASD</kbd> muovi · <kbd>Shift</kbd> corri · <kbd>Ctrl</kbd> accovacciati · <kbd>R</kbd> ricarica · <kbd>I</kbd> zaino</div>
       <div class="dbg"></div>
       <div class="over"><div>SEI MORTO</div><small>Clicca o tocca per ricominciare</small></div>`;
     for (let i = 0; i < 8; i++) { const w = document.createElement("i"); w.style.transform = `rotate(${i * 45}deg)`; this.q("dmg").appendChild(w); }

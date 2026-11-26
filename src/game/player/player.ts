@@ -71,7 +71,6 @@ export class Player {
     this.pitch = pitch;
   }
 
-  toggleTorch(): void { this.torch.setEnabled(!this.torch.isEnabled()); }
 
   update(input: InputState, dt: number): { moving: boolean; sprinting: boolean } {
     this.yaw += input.lookDX * SENS;

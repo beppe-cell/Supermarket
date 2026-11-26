@@ -3,7 +3,7 @@ export interface Objective { id: string; text: string; done: boolean }
 
 export class Objectives {
   readonly list: Objective[] = [
-    { id: "find_key", text: "Trova la chiave del magazzino", done: false },
+    { id: "find_key", text: "Trova la chiave elettronica", done: false },
     { id: "open_warehouse", text: "Apri la porta del magazzino", done: false },
   ];
   /** Segna un obiettivo come completato; ritorna l'obiettivo se è appena cambiato. */

@@ -42,7 +42,7 @@ await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
 await page.waitForTimeout(500);
 await page.waitForTimeout(500);
 const inv = await page.evaluate(() => window.__dbg.inventory());
-check("raccoglie oggetto passandoci vicino", inv.includes("batteries"), JSON.stringify(inv));
+check("raccoglie oggetto passandoci vicino", inv.includes("gauze"), JSON.stringify(inv));
 // carrello colpito da un proiettile: si deve muovere
 await page.evaluate(() => { window.__dbg.teleport(4.4, -3.6); window.__dbg.look(0, Math.atan2(1.65 - 0.5, 3.0)); });
 await page.waitForTimeout(400);

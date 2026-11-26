@@ -31,7 +31,6 @@ export class KeyboardMouseInput implements InputSource {
     out.crouch ||= k.has("ControlLeft") || k.has("KeyC");
     out.fire ||= this.firing;
     out.interact ||= k.has("KeyE");
-    out.torch ||= k.has("KeyF");
     out.reload ||= k.has("KeyR");
   }
 

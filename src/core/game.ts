@@ -1,7 +1,6 @@
 import type { Engine } from "@babylonjs/core/Engines/engine";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
-import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { createEngine } from "./engine-factory";
 import { Loader } from "./loader";
@@ -26,9 +25,8 @@ import { Infected } from "../game/enemies/infected";
 import { buildZone1Nav } from "../game/levels/zone1-nav";
 import type { Interactable } from "../game/interaction/interactable";
 
-const REACH = 2.4;
 /** Oggetti del livello → oggetti dell'inventario. */
-const PICKUP_ITEM: Record<string, string> = { "key-warehouse": "key_warehouse", "med-1": "gauze", "can-1": "canned_food", "bat-1": "batteries", "alc-1": "alcohol" };
+const PICKUP_ITEM: Record<string, string> = { "key-warehouse": "key_warehouse", "med-1": "gauze", "can-1": "canned_food", "alc-1": "alcohol" };
 const AMMO_PER_BOX = 12;
 
 export class Game {
@@ -155,13 +153,12 @@ export class Game {
     }
 
     loader.set(0.9, "Compilazione shader");
+    pistol.warmUp(); Infected.warmUp();
     await scene.whenReadyAsync();
     const step = new FixedTimestep(1 / 60);
     const obstacles = zone1Obstacles();
-    const ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
-    let target: Interactable | undefined;
     const autoCool = new Map<Interactable, number>();
-    let interactHeld = false, torchHeld = false, time = 0;
+    let time = 0;
     addEventListener("resize", () => this.engine.resize());
 
     let framesShown = 0;
@@ -174,19 +171,9 @@ export class Game {
         const n = step.advance(dt);
         if (!dead) for (let i = 0; i < n; i++) player.update(input, step.stepSize);
 
-        if (input.torch && !torchHeld) player.torch.setEnabled(!player.torch.isEnabled());
-        torchHeld = input.torch;
-
-        // Interazione: raggio dal centro della camera
-        scene.activeCamera?.getForwardRayToRef(ray, REACH);
-        const hit = scene.pickWithRay(ray, (m) => level.interactables.some((i) => i.mesh === m));
-        target = hit?.pickedMesh ? level.interactables.find((i) => i.mesh === hit.pickedMesh) : undefined;
-        hud.setPrompt(target && !dead ? target.prompt() : "");
-        if (input.interact && !interactHeld && target && !dead) target.interact(ctx);
-        interactHeld = input.interact;
         // raccolta e porte automatiche: basta passarci vicino (con pausa per evitare messaggi ripetuti)
-        if (!dead) for (const it of [...level.interactables]) {
-          const a = it.auto; if (!a || (a.ready && !a.ready())) continue;
+        if (!dead) for (let ii = level.interactables.length - 1; ii >= 0; ii--) {
+          const it = level.interactables[ii] as Interactable; const a = it.auto; if (!a || (a.ready && !a.ready())) continue;
           if ((autoCool.get(it) ?? 0) > time) continue;
           if (Math.hypot(player.position.x - a.x, player.position.z - a.z) < a.r) { autoCool.set(it, time + 2); it.interact(ctx); }
         }
@@ -205,7 +192,7 @@ export class Game {
         });
         const ctxE = {
           player: player.position, eye: player.camera.globalPosition, grid, sfx, playerAlive: !dead && time > 5, // 5 s di tregua all'inizio: nessuno spara appena nasci
-          playerFlags: { torch: player.torch.isEnabled(), sprinting, crouching: player.isCrouching },
+          playerFlags: { torch: true, sprinting, crouching: player.isCrouching },
           hurtPlayer: (n: number, from: Vector3) => {
             player.damage(n); sfx.playerHurt();
             let a = Math.atan2(from.x - player.position.x, from.z - player.position.z) - player.yawAngle;
@@ -227,7 +214,7 @@ export class Game {
         hud.setHealth(player.health / player.maxHealth, player.health);
         hud.setStamina(player.stamina.ratio);
         hud.setCrosshair(Math.min(1, pistol.heat + (moving ? 0.3 : 0) + (sprinting ? 0.4 : 0)));
-        level.flicker(time);
+        level.flicker(time); level.tick(time, player.position.x, player.position.z);
       }
       // Suggerimento "clicca per giocare" quando il mouse non è catturato (solo desktop)
       hud.setLockHint(!dev.isTouch && !paused && !dead && document.pointerLockElement !== this.canvas);

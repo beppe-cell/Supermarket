@@ -28,10 +28,9 @@ export const ZONE1 = {
   checkouts: [8, 11, 14, 17].map((x): Box => ({ x: x + 0.5, z: -11, w: 0.9, d: 2.2, h: 1.0 })),
   freezers: Array.from({ length: 6 }, (_, i): Box => ({ x: -16 + i * 5.2, z: 14, w: 4.4, d: 1, h: 2.1 })),
   pickups: [
-    { id: "key-warehouse", x: 1.8, y: 1.0, z: 13.2, label: "Chiave magazzino" },
+    { id: "key-warehouse", x: 1.86, y: 1.0, z: 1.5, label: "Chiave elettronica" },
     { id: "med-1", x: -13.2, y: 1.2, z: -2, label: "Garze" },
     { id: "can-1", x: -8.8, y: 1.2, z: 6, label: "Lattina di cibo" },
-    { id: "bat-1", x: 4.4, y: 1.2, z: -4, label: "Batterie" },
     { id: "alc-1", x: 8.8, y: 1.2, z: 3, label: "Alcol" },
     { id: "ammo-1", x: -6.2, y: 0.9, z: -11.6, label: "Munizioni 9 mm" },
     { id: "ammo-2", x: 12.2, y: 0.9, z: 12.2, label: "Munizioni 9 mm" },

@@ -3,10 +3,10 @@ import type { Objectives } from "../inventory/objectives";
 import { saveSettings, type Settings } from "../../core/settings";
 
 const ICON: Record<string, string> = {
+  card: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M6 15h5"/>',
   key: '<circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M17 12v3M20 12v2"/>',
   gauze: '<rect x="4" y="7" width="16" height="10" rx="2"/><path d="M12 9.5v5M9.5 12h5"/>',
   can: '<path d="M7 5h10v14a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M7 9h10M7 15h10"/>',
-  battery: '<rect x="3" y="8" width="16" height="8" rx="1.5"/><path d="M21 11v2M8 10.5v3M12 10.5v3"/>',
   bottle: '<path d="M10 3h4v4l2 3v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10l2-3z"/><path d="M8 14h8"/>',
   ammo: '<path d="M9 20V9a3 3 0 0 1 6 0v11z"/><path d="M9 16h6"/>',
   pistol: '<path d="M3 8h14l2 2v3h-6l-1 3H8l-.5-3H3z"/><path d="M13 13h2"/>',

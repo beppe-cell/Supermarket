@@ -14,10 +14,9 @@ export interface ItemDef {
 }
 
 export const ITEMS: Record<string, ItemDef> = {
-  key_warehouse: { id: "key_warehouse", name: "Chiave del magazzino", kind: "key", stack: 1, icon: "key", desc: "Chiave con etichetta «MAGAZZINO». Apre la porta a est della sala vendita." },
+  key_warehouse: { id: "key_warehouse", name: "Chiave elettronica", kind: "key", stack: 1, icon: "card", desc: "Tessera magnetica di accesso. Apre le porte che portano ad altri ambienti, come il magazzino a est." },
   gauze: { id: "gauze", name: "Garze", kind: "heal", stack: 3, icon: "gauze", heal: 25, desc: "Garze sterili. Recuperano 25 punti vita." },
   canned_food: { id: "canned_food", name: "Lattina di cibo", kind: "heal", stack: 4, icon: "can", heal: 10, desc: "Cibo in scatola. Recupera 10 punti vita." },
-  batteries: { id: "batteries", name: "Batterie", kind: "material", stack: 4, icon: "battery", desc: "Batterie stilo. Serviranno per la torcia e per il crafting." },
   alcohol: { id: "alcohol", name: "Alcol", kind: "material", stack: 3, icon: "bottle", desc: "Alcol etilico. Utile per il crafting (non ancora disponibile)." },
 };
 

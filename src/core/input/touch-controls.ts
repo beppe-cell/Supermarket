@@ -4,7 +4,6 @@ const ICONS: Record<string, string> = {
   fire: '<circle cx="12" cy="12" r="6.5"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>',
   reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   crouch: '<path d="M6 9l6 6 6-6"/><path d="M6 15l6 6 6-6"/>',
-  torch: '<path d="M8 3h8l-1 6H9z"/><path d="M9 9l-1 12h8l-1-12"/><path d="M12 12v4"/>',
   bag: '<path d="M9 6V5a3 3 0 0 1 6 0v1"/><path d="M6 11a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M9 15h6v4H9zM4 12v5M20 12v5"/>',
 };
 const svg = (n: string) => `<svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] ?? ""}</svg>`;
@@ -39,7 +38,6 @@ export class TouchInput implements InputSource {
   private dy = 0;
   private fire = false;
   private reload = false;
-  private torch = false;
   private crouch = false;
   private readonly root = document.createElement("div");
   private readonly base = document.createElement("div");
@@ -63,13 +61,12 @@ export class TouchInput implements InputSource {
     };
     this.hold(place("fire", "", "fire", 98, 0, 0, "fire"), (v) => { this.fire = v; if (v) navigator.vibrate?.(12); });
     // Gli altri pulsanti stanno su un arco attorno a FUOCO (sopra e a sinistra), a 155 px di distanza: lontani abbastanza da non toccarli per sbaglio
-    const side = (name: string, label: string, icon: string, k: number) => {
-      const ang = ((12 + k * 33) * Math.PI) / 180, R = 155;                  // 0° = dritto sopra, 90° = dritto a sinistra
+    const side = (name: string, label: string, icon: string, deg: number) => {
+      const ang = (deg * Math.PI) / 180, R = 155;                  // 0° = dritto sopra, 90° = dritto a sinistra
       return place(name, label, icon, 54, Math.round(R * Math.sin(ang)), Math.round(R * Math.cos(ang)));
     };
-    this.hold(side("reload", "RICARICA", "reload", 0), (v) => { this.reload = v; });
-    this.tap(side("crouch", "ABBASSA", "crouch", 1), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
-    this.hold(side("torch", "TORCIA", "torch", 2), (v) => (this.torch = v));
+    this.hold(side("reload", "RICARICA", "reload", 28), (v) => { this.reload = v; });
+    this.tap(side("crouch", "ABBASSA", "crouch", 68), (el) => { this.crouch = !this.crouch; el.classList.toggle("latched", this.crouch); });
     // Inventario: in alto a destra
     const inv = document.createElement("div"); inv.className = "tc-b"; inv.innerHTML = svg("bag") + "<span>ZAINO</span>";
     inv.style.width = inv.style.height = "54px"; inv.style.right = `calc(14px + ${sa("right")})`; inv.style.top = `calc(14px + ${sa("top")})`;
@@ -102,7 +99,7 @@ export class TouchInput implements InputSource {
   setVisible(v: boolean): void { this.root.classList.toggle("hidden", !v); if (!v) this.release(); }
 
   private release(): void {
-    this.moveId = this.lookId = -1; this.mx = this.my = 0; this.sprint = false; this.fire = this.reload = this.torch = false; this.base.style.display = "none";
+    this.moveId = this.lookId = -1; this.mx = this.my = 0; this.sprint = false; this.fire = this.reload = false; this.base.style.display = "none";
     for (const el of this.btns.values()) el.classList.remove("on");
   }
 
@@ -151,7 +148,7 @@ export class TouchInput implements InputSource {
     if (this.mx !== 0 || this.my !== 0) { out.moveX = this.mx; out.moveY = this.my; }
     out.lookDX += this.dx * 1.3; out.lookDY += this.dy * 1.3; this.dx = 0; this.dy = 0;
     out.sprint ||= this.sprint; out.crouch ||= this.crouch;
-    out.fire ||= this.fire; out.torch ||= this.torch; out.reload ||= this.reload;
+    out.fire ||= this.fire; out.reload ||= this.reload;
   }
 
   dispose(): void { this.abort.abort(); this.root.remove(); }

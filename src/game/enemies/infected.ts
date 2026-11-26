@@ -67,6 +67,8 @@ export class Infected implements Damageable {
   private handNode: TransformNode | undefined;
   /** Effetti di sparo condivisi da tutti i nemici (lampo, scia, scintille). */
   private static shared: { fx: WeaponEffects; muzzle: TransformNode } | undefined;
+  /** Come `Pistol.warmUp`: effetti del nemico compilati durante il caricamento. */
+  static warmUp(): void { const s = Infected.shared; if (!s) return; s.muzzle.position.set(0, -60, 0); s.fx.muzzleFlash(); s.fx.tracer(new Vector3(0, -60, 0), new Vector3(0, -60, 5)); }
   static updateFx(dt: number): void { Infected.shared?.fx.update(dt); }
 
   private constructor(scene: Scene, readonly id: number, private readonly patrolPts: Pt[]) {
