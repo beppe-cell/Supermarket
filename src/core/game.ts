@@ -76,8 +76,8 @@ export class Game {
     loader.set(0.75, "Nemici");
     const infectedModel = await loadModel(scene, "SM_Infected");
     const enemies = [
-      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -3 }, { x: -4.4, z: -8 }, { x: -8.8, z: -8 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
-      Infected.create(scene, infectedModel, 2, { x: 8.8, z: -4 }, [{ x: 8.8, z: 9 }, { x: 13.2, z: 9.5 }, { x: 13.2, z: -3 }, { x: 8.8, z: -8 }, { x: 4.4, z: -8 }], 0),
+      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -2 }, { x: -8.8, z: -2 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
+      Infected.create(scene, infectedModel, 2, { x: 8.8, z: -4 }, [{ x: 8.8, z: 9 }, { x: 13.2, z: 9.5 }, { x: 13.2, z: -3 }, { x: 8.8, z: -3 }], 0),
     ].slice(0, this.quality.maxActiveEnemies >= 2 ? 2 : 1);
 
     // --- HUD, inventario, obiettivi ---
@@ -204,7 +204,7 @@ export class Game {
           },
         });
         const ctxE = {
-          player: player.position, eye: player.camera.globalPosition, grid, sfx, playerAlive: !dead,
+          player: player.position, eye: player.camera.globalPosition, grid, sfx, playerAlive: !dead && time > 5, // 5 s di tregua all'inizio: nessuno spara appena nasci
           playerFlags: { torch: player.torch.isEnabled(), sprinting, crouching: player.isCrouching },
           hurtPlayer: (n: number, from: Vector3) => {
             player.damage(n); sfx.playerHurt();
