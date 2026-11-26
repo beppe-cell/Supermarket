@@ -55,10 +55,10 @@ export class Sfx {
     this.noise(0.07, "bandpass", 1200, 900, 0.55, o, 0, 0.9); this.tone("square", 600, 300, 0.06, 0.25, o, 0, 0.9); // dentro
     this.noise(0.04, "highpass", 2600, 2600, 0.5, o, 0, 1.35); this.tone("square", 1400, 700, 0.04, 0.3, o, 0, 1.35); // carrello
   }
-  /** Colpo andato a segno su metallo/androide: ping metallico. */
+  /** Colpo andato a segno su un bersaglio metallico: ping. */
   metalHit(pan = 0): void { const o = this.out(); if (!o) return; this.tone("triangle", 1900, 1200, 0.18, 0.35, o, pan); this.noise(0.08, "bandpass", 3500, 2500, 0.4, o, pan); }
   impact(): void { const o = this.out(); if (o) this.noise(0.08, "lowpass", 1800, 300, 0.4, o); }
-  /** Passo metallico dell'androide con attenuazione per distanza e panning. */
+  /** Passo metallico di un nemico con attenuazione per distanza e panning. */
   step(dist: number, pan: number): void {
     const o = this.out(); if (!o) return; const v = Math.max(0, 1 - dist / 22); if (v <= 0.02) return;
     this.tone("square", 140, 60, 0.09, 0.35 * v, o, pan); this.noise(0.06, "lowpass", 1400, 300, 0.4 * v, o, pan);

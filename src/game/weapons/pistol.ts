@@ -7,14 +7,14 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Scene } from "@babylonjs/core/scene";
 import { loadModel } from "../assets";
 import type { Sfx } from "../../core/audio/sfx";
-import type { Android, HitPart } from "../enemies/android";
+import type { Damageable, HitPart } from "../combat/damageable";
 import { WeaponEffects } from "./effects";
 
 export const MAG_SIZE = 15;
 const FIRE_INTERVAL = 0.17, RELOAD_TIME = 1.7, RANGE = 80;
 const MUZZLE = new Vector3(0, 0.07, 0.19); // dal JSON di prep_weapon (coordinate glTF)
 
-export interface HitReport { kind: "none" | "world" | "enemy"; part?: HitPart; killed?: boolean; enemy?: Android }
+export interface HitReport { kind: "none" | "world" | "enemy"; part?: HitPart; killed?: boolean; enemy?: Damageable }
 
 /** Pistola in prima persona (Beretta M9): viewmodel con sway/rinculo, ricarica, hitscan con dispersione, effetti e suoni. */
 export class Pistol {
@@ -97,7 +97,7 @@ export class Pistol {
     const hit = this.scene.pickWithRay(this.ray, (m: AbstractMesh) => !!(m.metadata?.enemy) || (m.checkCollisions && m.name !== "player-body"));
     const muzzle = this.muzzleWorld;
     if (hit?.hit && hit.pickedPoint) {
-      const p = hit.pickedPoint, enemy = hit.pickedMesh?.metadata?.enemy as Android | undefined;
+      const p = hit.pickedPoint, enemy = hit.pickedMesh?.metadata?.enemy as Damageable | undefined;
       this.fx.tracer(muzzle, p);
       if (enemy) {
         const part = hit.pickedMesh?.metadata?.part as HitPart;
