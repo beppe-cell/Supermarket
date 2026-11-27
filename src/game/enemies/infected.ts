@@ -24,7 +24,11 @@ export interface HordeGroup {
 }
 type Kind = "walk" | "shamble" | "run";
 
+/** Comportamento del giocatore che influisce sul rilevamento. */
+export interface PlayerFlags { moving: boolean; sprinting: boolean; crouching: boolean }
+
 export interface HordeContext {
+  flags: PlayerFlags;
   player: Vector3;
   playerAlive: boolean;
   grid: NavGrid;
@@ -42,7 +46,12 @@ const FACING_OFFSET = 0;                                   // il fronte del mode
 const ANIM_V: Record<Kind, number> = { walk: 1.15, shamble: 0.76, run: 2.14 };
 const SPEED: Record<Kind, number> = { walk: 1.15, shamble: 0.8, run: 2.35 };
 const LOOPS = new Set(["Idle", "Walk", "Shamble", "Run"]);
-const WANDER_SPEED = 0.55, SIGHT = 13, HEAR = 3.6, FOV_HALF = 1.25;
+const WANDER_SPEED = 0.55;
+/** Percezione: cono visivo (± FOV_HALF) con linea libera entro SIGHT, udito a 360° con raggio che dipende da come si muove il giocatore.
+ *  Accovacciato si vede meno (portata e cono ridotti) e si fa quasi silenzio; passare alle spalle è sicuro solo se si resta oltre il raggio d'udito. */
+const FOV_HALF = 1.0;
+const sightRange = (f: PlayerFlags): number => (f.crouching ? 6.5 : f.sprinting ? 16 : 12);
+const hearRange = (f: PlayerFlags): number => (!f.moving ? 0.9 : f.crouching ? 1.1 : f.sprinting ? 6.5 : 2.3);
 const MELEE_RANGE = 1.35, MELEE_DAMAGE = 7;
 const DAMAGE: Record<HitPart, number> = { head: 70, torso: 34, legs: 24 };
 
@@ -163,7 +172,7 @@ export class Infected implements Damageable {
       if (this.attackT > 1.25) { this.state = "move"; this.cooldown = 0.7 + Math.random() * 0.5; }
     } else {
       // percezione: vicino (udito) oppure davanti, entro SIGHT e con linea libera (la torcia accesa li attira)
-      this.sees = ctx.playerAlive && (dist < HEAR || (dist < SIGHT && Math.abs(angleTo({ x: me.x, z: me.z }, this.yaw, { x: pl.x, z: pl.z })) < FOV_HALF && ctx.grid.lineClear({ x: me.x, z: me.z }, { x: pl.x, z: pl.z })));
+      this.sees = ctx.playerAlive && (dist < hearRange(ctx.flags) || (dist < sightRange(ctx.flags) && Math.abs(angleTo({ x: me.x, z: me.z }, this.yaw, { x: pl.x, z: pl.z })) < (ctx.flags.crouching ? 0.85 : FOV_HALF) && ctx.grid.lineClear({ x: me.x, z: me.z }, { x: pl.x, z: pl.z })));
       if (this.sees && !this.group.alerted) { ctx.alert(this.group); this.growlT = 0; }
       const chasing = this.group.alerted;
       let dir: { x: number; z: number } | undefined;

@@ -1,13 +1,18 @@
 /** Dati livello Z1 "Sala vendita" (greybox). Unità: metri. Il builder legge solo questi dati. */
 export interface Box { x: number; z: number; w: number; d: number; h?: number; y?: number }
 export interface DoorDef { id: string; x: number; z: number; w: number; axis: "x" | "z"; locked?: boolean; label: string }
-export interface PickupDef { id: string; x: number; y: number; z: number; label: string }
+export interface PickupDef { id: string; x: number; y: number; z: number; label: string; /** Appoggiato su un ripiano (dentro il box dello scaffale). */ shelf?: boolean }
 export interface LightDef { x: number; z: number }
 
 /** Corsie a x = multipli di 4.4 m; blocchi di scaffali larghi 1.1 m a metà fra due corsie (corsie libere di 3.3 m). */
 const BLOCK_X = [-24.2, -19.8, -15.4, -11, -6.6, -2.2, 2.2, 6.6, 11, 15.4, 19.8, 24.2];
 const AISLE_X = [-26.4, -22, -17.6, -13.2, -8.8, -4.4, 0, 4.4, 8.8, 13.2, 17.6, 22, 26.4];
 const lanes = (sign: 1 | -1): Box[] => Array.from({ length: 9 }, (_, k): Box => ({ x: sign * (7.5 + k * 2.5), z: -12, w: 0.9, d: 2.2, h: 1.0 }));
+
+const BOARD = [0.26, 0.62, 0.98, 1.34, 1.7];
+/** Oggetto su un ripiano: blocco x, lato (-1 = affaccio a ovest, +1 = est), z, ripiano (0–4). */
+const onShelf = (id: string, label: string, bx: number, side: -1 | 1, z: number, board: number): PickupDef => ({ id, label, x: +(bx + side * 0.4).toFixed(2), y: BOARD[board] ?? 1, z, shelf: true });
+const onFloor = (id: string, label: string, x: number, z: number): PickupDef => ({ id, label, x, y: 0.05, z });
 
 export const ZONE1 = {
   id: "z1",
@@ -53,32 +58,52 @@ export const ZONE1 = {
   ] as Box[],
   /** Banchi ortofrutta (fascia ovest): casse di legno e plastica. */
   produce: Array.from({ length: 7 }, (_, i): Box => ({ x: -30, z: -2 + i * 3.4, w: 1.6, d: 2.2, h: 0.9 })),
+  /** Oggetti sparsi per il negozio (id = tipo-numero: forma e inventario dipendono dal tipo; vedi decor.ts e game.ts). */
   pickups: [
-    { id: "key-warehouse", x: 1.86, y: 1.0, z: 7.9, label: "Chiave elettronica" },
-    { id: "med-1", x: -13.2, y: 1.2, z: -3, label: "Garze" },
-    { id: "can-1", x: -8.8, y: 1.2, z: 10, label: "Lattina di cibo" },
-    { id: "alc-1", x: 17.6, y: 1.2, z: 6, label: "Alcol" },
-    { id: "ammo-1", x: -26.4, y: 0.9, z: 3, label: "Munizioni 9 mm" },
-    { id: "ammo-2", x: 11, y: 0.9, z: 15.2, label: "Munizioni 9 mm" },
-    { id: "ammo-3", x: 24, y: 0.9, z: -17, label: "Munizioni 9 mm" },
-    { id: "ammo-4", x: -4.4, y: 0.9, z: -3, label: "Munizioni 9 mm" },
-    { id: "ammo-5", x: 4.4, y: 0.9, z: 12, label: "Munizioni 9 mm" },
-    { id: "ammo-6", x: 8.8, y: 0.9, z: -3, label: "Munizioni 9 mm" },
-    { id: "ammo-7", x: -17.6, y: 0.9, z: 8, label: "Munizioni 9 mm" },
-    { id: "ammo-8", x: 22, y: 0.9, z: 10, label: "Munizioni 9 mm" },
-    { id: "ammo-9", x: -22, y: 0.9, z: -3, label: "Munizioni 9 mm" },
-    { id: "ammo-10", x: 17.6, y: 0.9, z: -3, label: "Munizioni 9 mm" },
-    { id: "ammo-11", x: -8.8, y: 0.9, z: 15.2, label: "Munizioni 9 mm" },
-    { id: "ammo-12", x: 15.4, y: 0.9, z: 15.2, label: "Munizioni 9 mm" },
-    { id: "ammo-13", x: -26.4, y: 0.9, z: 17, label: "Munizioni 9 mm" },
-    { id: "ammo-14", x: 26.4, y: 0.9, z: 5, label: "Munizioni 9 mm" },
-    { id: "ammo-15", x: -20, y: 0.9, z: -21, label: "Munizioni 9 mm" },
-    { id: "ammo-16", x: 20, y: 0.9, z: -21, label: "Munizioni 9 mm" },
-    { id: "ammo-17", x: -5.75, y: 0.9, z: -12, label: "Munizioni 9 mm" },
-    { id: "ammo-18", x: 5.75, y: 0.9, z: -12, label: "Munizioni 9 mm" },
-    { id: "ammo-19", x: 0, y: 0.9, z: -8, label: "Munizioni 9 mm" },
-    { id: "ammo-20", x: -13.2, y: 0.9, z: 12, label: "Munizioni 9 mm" },
-    { id: "ammo-21", x: 2.2, y: 0.9, z: 1.5, label: "Munizioni 9 mm" },
+    { id: "key-warehouse", x: 1.86, y: 1.0, z: 7.9, label: "Chiave elettronica", shelf: true },
+    onShelf("pistol-1", "Beretta M9", -2.2, 1, -2.3, 3),
+    onFloor("ammo-1", "Munizioni 9 mm", -26.4, 3),
+    onFloor("ammo-2", "Munizioni 9 mm", 11, 15.2),
+    onFloor("ammo-3", "Munizioni 9 mm", 24, -17),
+    onFloor("ammo-4", "Munizioni 9 mm", -4.4, -3),
+    onFloor("ammo-5", "Munizioni 9 mm", 4.4, 12),
+    onFloor("ammo-6", "Munizioni 9 mm", 8.8, -3),
+    onFloor("ammo-7", "Munizioni 9 mm", -17.6, 8),
+    onFloor("ammo-8", "Munizioni 9 mm", 22, 10),
+    onFloor("ammo-9", "Munizioni 9 mm", -22, -3),
+    onFloor("ammo-10", "Munizioni 9 mm", 17.6, -3),
+    onFloor("ammo-11", "Munizioni 9 mm", -8.8, 15.2),
+    onFloor("ammo-12", "Munizioni 9 mm", 15.4, 15.2),
+    onFloor("ammo-13", "Munizioni 9 mm", -26.4, 17),
+    onFloor("ammo-14", "Munizioni 9 mm", 26.4, 5),
+    onFloor("ammo-15", "Munizioni 9 mm", -20, -21),
+    onFloor("ammo-16", "Munizioni 9 mm", 20, -21),
+    onFloor("ammo-17", "Munizioni 9 mm", -5.75, -12),
+    onFloor("ammo-18", "Munizioni 9 mm", 5.75, -12),
+    onFloor("ammo-19", "Munizioni 9 mm", 0, -8),
+    onFloor("ammo-20", "Munizioni 9 mm", -13.2, 12),
+    onFloor("ammo-21", "Munizioni 9 mm", 2.2, 1.5),
+    onShelf("alcohol-1", "Alcol", -24.2, 1, -3.5, 2),
+    onShelf("alcohol-2", "Alcol", 11, -1, 9.1, 3),
+    onShelf("alcohol-3", "Alcol", 19.8, 1, 5.5, 2),
+    onShelf("alcohol-4", "Alcol", -15.4, -1, 12.7, 1),
+    onShelf("tape-1", "Nastro adesivo", 6.6, 1, -4.7, 2),
+    onShelf("tape-2", "Nastro adesivo", -19.8, -1, 7.9, 3),
+    onShelf("tape-3", "Nastro adesivo", 15.4, 1, 10.3, 2),
+    onFloor("tape-4", "Nastro adesivo", -22, 14),
+    onFloor("rags-1", "Stracci", -13.2, -3),
+    onFloor("rags-2", "Stracci", 8.8, 10),
+    onFloor("rags-3", "Stracci", -17.6, -3),
+    onFloor("gauze-1", "Garze", -13.2, -4.3),
+    onFloor("gauze-2", "Garze", -8.8, 10),
+    onFloor("gauze-3", "Garze", 17.6, 6),
+    onFloor("gauze-4", "Garze", 4.4, -5),
+    onFloor("gauze-5", "Garze", -22, 8),
+    onShelf("gauze-6", "Garze", 2.2, -1, 12.7, 2),
+    onShelf("can-1", "Lattina di cibo", -6.6, 1, 12.7, 3),
+    onShelf("can-2", "Lattina di cibo", 11, 1, -3.5, 2),
+    onShelf("can-3", "Lattina di cibo", -11, -1, 5.5, 2),
+    onShelf("can-4", "Lattina di cibo", 24.2, -1, 9.1, 3),
   ] as PickupDef[],
   /** Carrelli: `kind` = SM_Trolley (carrello spesa) o SM_RollCage (gabbia a ruote). */
   trolleys: [

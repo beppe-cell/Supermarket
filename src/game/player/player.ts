@@ -7,7 +7,6 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Scene } from "@babylonjs/core/scene";
 import type { InputState } from "../../core/input/input-state";
-import { Stamina } from "./stamina";
 
 const WALK = 2.2, SPRINT = 4.2, CROUCH = 1.2; // m/s
 const EYE_STAND = 1.65, EYE_CROUCH = 1.05;
@@ -16,7 +15,6 @@ const SENS = 0.0022, GRAVITY = 9.8;
 /** Giocatore in prima persona: corpo con collisioni (box) + camera + torcia. */
 export class Player {
   readonly camera: FreeCamera;
-  readonly stamina = new Stamina();
   health = 100;
   readonly maxHealth = 100;
   private recoilPitch = 0;
@@ -85,7 +83,7 @@ export class Player {
 
     const moving = input.moveX !== 0 || input.moveY !== 0;
     const crouching = input.crouch;
-    const sprinting = this.stamina.update(input.sprint && !crouching, moving, dt);
+    const sprinting = input.sprint && !crouching && moving;      // niente stamina: si può correre senza limiti
     const speed = crouching ? CROUCH : sprinting ? SPRINT : WALK;
 
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);

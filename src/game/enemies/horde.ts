@@ -6,7 +6,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import type { NavGrid, Pt } from "../ai/nav-grid";
 import type { Sfx } from "../../core/audio/sfx";
 import { ZONE1 } from "../levels/zone1";
-import { Infected, type HordeGroup } from "./infected";
+import { Infected, type HordeGroup, type PlayerFlags } from "./infected";
 
 export interface HordeConfig {
   /** Gruppi totali (3–4 infetti ciascuno). */
@@ -81,7 +81,7 @@ export class Horde {
     for (const g of this.groups) if (!g.alerted && this.list.some((e) => e.group === g && e.alive && Math.hypot(e.position.x - x, e.position.z - z) < radius)) { g.alerted = true; g.loseT = 0; }
   }
 
-  update(dt: number, player: Vector3, ctx: { playerAlive: boolean; sfx: Sfx; hurtPlayer(n: number, from: Vector3): void }): void {
+  update(dt: number, player: Vector3, ctx: { playerAlive: boolean; sfx: Sfx; flags: PlayerFlags; hurtPlayer(n: number, from: Vector3): void }): void {
     if (!this.started) return;
     this.spawnT -= dt; this.fieldT -= dt;
     if (!this.field || this.fieldT <= 0) { this.fieldT = 0.4; this.field = this.grid.flowField({ x: player.x, z: player.z }); }
@@ -101,7 +101,7 @@ export class Horde {
         if (g.arrived) { g.waitT -= dt; if (g.waitT <= 0) this.pickWaypoint(g, g.waypoint); }
       }
     }
-    const full = { player, playerAlive: ctx.playerAlive, grid: this.grid, field: this.field, sfx: ctx.sfx, hurtPlayer: ctx.hurtPlayer, others: this.list, alert: (g: HordeGroup) => { g.alerted = true; g.loseT = 0; } };
+    const full = { player, playerAlive: ctx.playerAlive, grid: this.grid, field: this.field, sfx: ctx.sfx, flags: ctx.flags, hurtPlayer: ctx.hurtPlayer, others: this.list, alert: (g: HordeGroup) => { g.alerted = true; g.loseT = 0; } };
     for (const e of this.list) e.update(dt, full);
     // i cadaveri restano a terra, ma al massimo 10 (i più vecchi spariscono)
     const dead = this.list.filter((e) => !e.alive).sort((a, b) => b.corpseAge - a.corpseAge);

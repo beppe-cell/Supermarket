@@ -4,6 +4,8 @@ import { saveSettings, type Settings } from "../../core/settings";
 
 const ICON: Record<string, string> = {
   card: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M6 15h5"/>',
+  tape: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3"/>',
+  rags: '<path d="M4 8h16v9H4zM4 12h16M9 8v9"/>',
   key: '<circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M17 12v3M20 12v2"/>',
   gauze: '<rect x="4" y="7" width="16" height="10" rx="2"/><path d="M12 9.5v5M9.5 12h5"/>',
   can: '<path d="M7 5h10v14a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M7 9h10M7 15h10"/>',

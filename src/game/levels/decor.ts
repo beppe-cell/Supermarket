@@ -14,7 +14,7 @@ import cartonsUrl from "../../../assets/exported/textures/cartons.jpg?url";
 import fridgesUrl from "../../../assets/exported/textures/fridges.jpg?url";
 import keycardUrl from "../../../assets/exported/textures/keycard.png?url";
 import decalsUrl from "../../../assets/exported/textures/decals.png?url";
-import { ZONE1, type Box } from "./zone1";
+import { ZONE1, type Box, type PickupDef } from "./zone1";
 
 /** Rettangolo in pixel (x0,y0,x1,y1) di una texture 1024×1024 → UV Babylon (v verso l'alto). */
 const uv = (r: [number, number, number, number]): Vector4 => new Vector4(r[0] / 1024, 1 - r[3] / 1024, r[2] / 1024, 1 - r[1] / 1024);
@@ -55,6 +55,10 @@ export interface Decor {
   keycard: Mesh;
   /** Aggiorna lampeggio della tessera (solo vicino) e nebbia: chiamare ogni frame. */
   tick(t: number, px: number, pz: number): void;
+  /** Livello di illuminazione dei materiali autoilluminati (cartelli, striscioni, frigoriferi): 0 = spenti, 1 = accesi. */
+  setLight(k: number): void;
+  /** Crea la mesh di un oggetto raccoglibile con forma coerente col tipo (id = tipo-numero) e la registra per il lampeggio giallo a ~10 m. */
+  pickup(p: PickupDef): Mesh;
 }
 
 export function buildDecor(scene: Scene, q: QualityProfile): Decor {
@@ -71,7 +75,8 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
   };
 
   // Cartelli appesi/a muro
-  const signM = std("signs", tex(signsUrl), 0.32);
+  const glowing: { m: StandardMaterial; base: number }[] = [];
+  const signM = std("signs", tex(signsUrl), 0.32); glowing.push({ m: signM, base: 0.32 });
   const signParts: Mesh[] = [];
   const sign = (key: string, w: number, x: number, y: number, z: number, rotY: number, hang = false): void => {
     const r = SIGN[key] as [number, number, number, number]; const h = (w * (r[3] - r[1])) / (r[2] - r[0]);
@@ -135,7 +140,7 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
     c.fillStyle = "#f2f6f5"; c.textAlign = "center"; c.font = `bold ${Math.round(py * 0.42)}px sans-serif`; c.fillText(title, px / 2, py * (sub ? 0.56 : 0.66));
     if (sub) { c.font = `600 ${Math.round(py * 0.17)}px sans-serif`; c.fillStyle = "rgba(255,255,255,0.8)"; c.fillText(sub, px / 2, py * 0.86); }
     t.update();
-    const m = new StandardMaterial(`banner-${title}`, scene); m.diffuseTexture = t; m.emissiveTexture = t; m.emissiveColor = new Color3(0.35, 0.35, 0.35); m.specularColor = Color3.Black(); m.backFaceCulling = true;
+    const m = new StandardMaterial(`banner-${title}`, scene); m.diffuseTexture = t; m.emissiveTexture = t; m.emissiveColor = new Color3(0.35, 0.35, 0.35); m.specularColor = Color3.Black(); m.backFaceCulling = true; glowing.push({ m, base: 0.35 });
     for (const side of [0, 1]) {
       const pl = MeshBuilder.CreatePlane(`banner-${title}-${side}`, { width: w, height: h }, scene);
       const nx = Math.sin(rotY), nz = Math.cos(rotY); const off = side ? 0.02 : -0.02;           // le due facce leggibili da entrambi i lati
@@ -166,7 +171,7 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
   merge(decalParts, "decals", decalM);
 
   // Fronti: frigoriferi a vetri sul muro nord, casse con pannello e nastro
-  const fridgeM = std("fridges", tex(fridgesUrl), 0.18);
+  const fridgeM = std("fridges", tex(fridgesUrl), 0.18); glowing.push({ m: fridgeM, base: 0.18 });
   const fridgeParts: Mesh[] = [];
   for (const f of ZONE1.freezers) {
     const front = MeshBuilder.CreatePlane(`fridge-front-${f.x}`, { width: f.w, height: f.h ?? 2.1, sideOrientation: Mesh.DOUBLESIDE, frontUVs: uv([14, 14, 498, 492]), backUVs: uv([14, 14, 498, 492]) }, scene);
@@ -202,9 +207,74 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
   beam.material = beamM; beam.isPickable = false; beam.isVisible = false; beam.position.set(kp.x, kp.y + 1.3, kp.z);
   buildMist(scene, q);
 
+  // --- Oggetti raccoglibili: forma coerente col tipo + lampeggio giallo quando si è entro 10 m ----------------------------------
+  const canvasTex = (name: string, w: number, h: number, paint: (c: CanvasRenderingContext2D) => void): DynamicTexture => {
+    const t = new DynamicTexture(name, { width: w, height: h }, scene, true); paint(t.getContext() as unknown as CanvasRenderingContext2D); t.update(); return t;
+  };
+  const stdc = (name: string, r: number, g: number, b: number, spec = 0.1, alpha = 1): StandardMaterial => { const m = new StandardMaterial(name, scene); m.diffuseColor = new Color3(r, g, b); m.specularColor = new Color3(spec, spec, spec); m.alpha = alpha; m.maxSimultaneousLights = 6; return m; };
+  const ammoTex = canvasTex("ammo-tex", 128, 64, (c) => { c.fillStyle = "#5b4b2a"; c.fillRect(0, 0, 128, 64); c.fillStyle = "#d9b84a"; c.fillRect(0, 0, 128, 12); c.fillRect(0, 52, 128, 12); c.fillStyle = "#f2ead0"; c.font = "bold 26px sans-serif"; c.fillText("9mm", 30, 42); });
+  const aidTex = canvasTex("aid-tex", 64, 64, (c) => { c.fillStyle = "#f2f4f4"; c.fillRect(0, 0, 64, 64); c.fillStyle = "#c0282d"; c.fillRect(26, 12, 12, 40); c.fillRect(12, 26, 40, 12); });
+  const mats: Record<string, StandardMaterial> = {};
+  const mat = (k: string, mk: () => StandardMaterial): StandardMaterial => (mats[k] ??= mk());
+  const ph = (id: string): number => { let h = 7; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return h; };
+  const mergeOne = (parts: Mesh[], m: StandardMaterial): Mesh => { const mm = Mesh.MergeMeshes(parts, true, true) as Mesh; mm.material = m; return mm; };
+  const buildShape = (kind: string): { mesh: Mesh; h: number } => {
+    switch (kind) {
+      case "pistol": {   // pistola in miniatura appoggiata su un fianco: carrello, bocca, impugnatura inclinata, ponticello
+        const slide = MeshBuilder.CreateBox("p-slide", { width: 0.19, height: 0.03, depth: 0.026 }, scene); slide.position.set(0, 0.052, 0);
+        const barrel = MeshBuilder.CreateCylinder("p-barrel", { height: 0.03, diameter: 0.012, tessellation: 8 }, scene); barrel.rotation.z = Math.PI / 2; barrel.position.set(0.105, 0.05, 0);
+        const grip = MeshBuilder.CreateBox("p-grip", { width: 0.032, height: 0.085, depth: 0.026 }, scene); grip.position.set(-0.062, 0.0, 0); grip.rotation.z = 0.22;
+        const frame = MeshBuilder.CreateBox("p-frame", { width: 0.1, height: 0.02, depth: 0.024 }, scene); frame.position.set(0.01, 0.027, 0);
+        const guard = MeshBuilder.CreateTorus("p-guard", { diameter: 0.034, thickness: 0.005, tessellation: 12 }, scene); guard.rotation.x = Math.PI / 2; guard.position.set(0.012, 0.008, 0); guard.scaling.set(1, 1, 1);
+        const m = mergeOne([slide, barrel, grip, frame, guard], mat("pistol", () => stdc("pickup-pistol", 0.36, 0.38, 0.4, 0.9)));
+        m.rotation.x = Math.PI / 2; return { mesh: m, h: 0.015 };
+      }
+      case "ammo": { const b = MeshBuilder.CreateBox("a-box", { width: 0.11, height: 0.05, depth: 0.065 }, scene); b.material = mat("ammo", () => { const m = stdc("pickup-ammo", 1, 1, 1, 0.05); m.diffuseTexture = ammoTex; return m; }); return { mesh: b, h: 0.025 }; }
+      case "gauze": { const b = MeshBuilder.CreateBox("g-box", { width: 0.13, height: 0.05, depth: 0.09 }, scene); b.material = mat("aid", () => { const m = stdc("pickup-aid", 1, 1, 1, 0.05); m.diffuseTexture = aidTex; return m; }); return { mesh: b, h: 0.025 }; }
+      case "alcohol": {  // bottiglia di vetro scuro con collo e tappo
+        const body = MeshBuilder.CreateCylinder("b-body", { height: 0.15, diameter: 0.07, tessellation: 14 }, scene); body.position.y = 0.075;
+        const neck = MeshBuilder.CreateCylinder("b-neck", { height: 0.06, diameterTop: 0.022, diameterBottom: 0.04, tessellation: 10 }, scene); neck.position.y = 0.18;
+        const cap = MeshBuilder.CreateCylinder("b-cap", { height: 0.014, diameter: 0.026, tessellation: 8 }, scene); cap.position.y = 0.217;
+        const m = mergeOne([body, neck, cap], mat("bottle", () => stdc("pickup-bottle", 0.14, 0.32, 0.22, 0.9, 0.85))); m.rotation.z = Math.PI / 2; return { mesh: m, h: 0.035 };
+      }
+      case "can": {      // lattina cilindrica con bordo metallico
+        const body = MeshBuilder.CreateCylinder("c-body", { height: 0.11, diameter: 0.07, tessellation: 16 }, scene); body.position.y = 0.055;
+        const rim = MeshBuilder.CreateCylinder("c-rim", { height: 0.008, diameter: 0.074, tessellation: 16 }, scene); rim.position.y = 0.112;
+        return { mesh: mergeOne([body, rim], mat("can", () => stdc("pickup-can", 0.72, 0.22, 0.16, 0.7))), h: 0 };
+      }
+      case "tape": {     // rotolo di nastro: toro con anima vuota
+        const t = MeshBuilder.CreateTorus("t-roll", { diameter: 0.09, thickness: 0.032, tessellation: 20 }, scene); t.rotation.x = 0; t.material = mat("tape", () => stdc("pickup-tape", 0.5, 0.5, 0.52, 0.3)); return { mesh: t, h: 0.016 };
+      }
+      case "rags": {     // stracci piegati
+        const a = MeshBuilder.CreateBox("r-a", { width: 0.15, height: 0.022, depth: 0.1 }, scene); const b = MeshBuilder.CreateBox("r-b", { width: 0.13, height: 0.02, depth: 0.09 }, scene); b.position.y = 0.021; b.rotation.y = 0.35;
+        return { mesh: mergeOne([a, b], mat("rags", () => stdc("pickup-rags", 0.46, 0.5, 0.56, 0.02))), h: 0.011 };
+      }
+      default: { const b = MeshBuilder.CreateBox("u-box", { size: 0.12 }, scene); b.material = mat("unk", () => stdc("pickup-unk", 0.8, 0.7, 0.2)); return { mesh: b, h: 0.06 }; }
+    }
+  };
+  const pgTex = new DynamicTexture("pick-glow", 128, scene, true); { const c = pgTex.getContext(); const g = c.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, "rgba(255,235,120,1)"); g.addColorStop(0.3, "rgba(255,200,40,0.55)"); g.addColorStop(1, "rgba(255,170,0,0)"); c.fillStyle = g; c.fillRect(0, 0, 128, 128); pgTex.update(); pgTex.hasAlpha = true; }
+  const pgM = new StandardMaterial("pick-glow", scene); pgM.emissiveTexture = pgTex; pgM.opacityTexture = pgTex; pgM.disableLighting = true; pgM.backFaceCulling = false; pgM.alphaMode = 1;
+  const picks: { mesh: Mesh; glow: Mesh }[] = [];
+  const PICK_NEAR = 10, PICK_SCALE = 1.6;   // un po' ingranditi: sugli scaffali sarebbero sepolti dai prodotti
+  const pickup = (p: PickupDef): Mesh => {
+    const kind = p.id.split("-")[0] as string, { mesh, h } = buildShape(kind);
+    mesh.name = p.id; mesh.scaling.setAll(PICK_SCALE); mesh.position.set(p.x, p.y + h * PICK_SCALE, p.z); mesh.rotation.y = ((ph(p.id) % 628) / 100); mesh.isPickable = false;
+    const glow = MeshBuilder.CreatePlane(`${p.id}-glow`, { size: 0.45 }, scene); glow.material = pgM; glow.billboardMode = Mesh.BILLBOARDMODE_ALL; glow.isPickable = false; glow.isVisible = false;
+    glow.position.set(p.x, p.y + 0.1, p.z); picks.push({ mesh, glow }); return mesh;
+  };
+
   return {
+    setLight(k) { for (const g of glowing) { const v = g.base * (0.03 + 0.97 * k); g.m.emissiveColor.set(v, v, v); } },
+    pickup,
     keycard,
     tick(t, px, pz) {
+      for (let i = picks.length - 1; i >= 0; i--) {
+        const k = picks[i] as { mesh: Mesh; glow: Mesh };
+        if (k.mesh.isDisposed()) { k.glow.dispose(); picks.splice(i, 1); continue; }
+        const d = Math.hypot(px - k.mesh.position.x, pz - k.mesh.position.z);
+        const show = d < PICK_NEAR && Math.sin(t * 6 + i) > -0.1; k.glow.isVisible = show;
+        if (show) k.glow.scaling.setAll(1 + d * 0.12);
+      }
       if (keycard.isDisposed()) { glow.dispose(); beam.dispose(); return; }
       const near = Math.hypot(px - kp.x, pz - kp.z) < NEAR;
       const on = near && Math.sin(t * 7) > -0.2;

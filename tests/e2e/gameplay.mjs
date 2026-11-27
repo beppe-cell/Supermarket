@@ -12,6 +12,11 @@ await page.waitForFunction(() => window.__dbg, null, { timeout: 30000 });
 const results = [];
 const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "OK  " : "FAIL"} ${name} ${info}`); };
 
+// si parte al buio con il conto alla rovescia (30 s), senza pistola
+await page.waitForFunction(() => window.__dbg.phase()[2] === true, null, { timeout: 60000 });
+const ph0 = await page.evaluate(() => window.__dbg.phase());
+check("parte al buio con conto alla rovescia", ph0[0] === "dark" && ph0[1] <= 30 && ph0[2] === true, JSON.stringify(ph0));
+await page.evaluate(() => window.__dbg.devLive()); // per i test seguenti: luci accese e pistola in mano
 const p0 = await page.evaluate(() => window.__dbg.pos());
 await page.keyboard.down("KeyW");
 await page.waitForFunction((z) => window.__dbg.pos()[2] - z > 0.8, p0[2], { timeout: 40000 }).catch(() => {});

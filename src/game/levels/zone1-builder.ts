@@ -103,6 +103,8 @@ export interface BuiltLevel {
   flicker: (t: number) => void;
   /** Aggiornamenti per frame legati alla posizione del giocatore (lampeggio tessera). */
   tick: (t: number, px: number, pz: number) => void;
+  /** Illuminazione generale: 0 = tutto spento (resta la torcia), 1 = neon, cartelli e riflessi accesi. */
+  setLight: (k: number) => void;
 }
 
 function mat(scene: Scene, name: string, hex: string, emissive = false): StandardMaterial {
@@ -205,14 +207,12 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
 
   const decor = buildDecor(scene, q);
   // Oggetti raccoglibili (greybox: cubetti; la tessera elettronica ha la sua mesh)
-  const pickM = mat(scene, "pickup", "#c9b458");
   for (const p of ZONE1.pickups) {
     const isKey = p.id === "key-warehouse";
-    const m = isKey ? decor.keycard : MeshBuilder.CreateBox(p.id, { size: 0.22 }, scene);
-    if (!isKey) { m.position.set(p.x, p.y, p.z); m.material = pickM; }
+    const m = isKey ? decor.keycard : decor.pickup(p);
     interactables.push({
       mesh: m,
-      auto: { x: p.x, z: p.z, r: isKey ? 1.9 : 1.3 },
+      auto: { x: p.x, z: p.z, r: isKey || p.shelf ? 2.0 : 1.3 },
       prompt: () => `Raccogli ${p.label}`,
       interact: (ctx) => { if (!ctx.addItem(p.id, p.label)) return; m.dispose(); interactables.splice(interactables.findIndex((i) => i.mesh === m), 1); },
     });
@@ -228,14 +228,24 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     console.warn("Props non caricati, uso greybox:", e);
   }
 
+  let lightK = 1;
+  const baseEnv = 0.35, neonBase = Color3.FromHexString(look.neonColor);
+  const setLight = (k: number): void => {
+    lightK = k;
+    const f = 0.03 + 0.97 * k;
+    amb.intensity = look.ambient * (0.12 + 0.88 * k);
+    neonM.emissiveColor.set(neonBase.r * f, neonBase.g * f, neonBase.b * f);
+    scene.environmentIntensity = baseEnv * (0.1 + 0.9 * k);
+    decor.setLight(k);
+  };
   const flicker = (t: number) => {
     for (const { l, base, seed } of lights) {
       const n = Math.sin(t * 3.1 + seed) * Math.sin(t * 7.7 + seed * 1.7);
       const off = Math.sin(t * 0.37 + seed) > 0.985;
-      l.intensity = off ? 0.05 : base * (n > 0.92 ? 0.35 : 1);
+      l.intensity = (off ? 0.05 : base * (n > 0.92 ? 0.35 : 1)) * lightK;
     }
   };
-  return { scene, interactables, movables, flicker, tick: decor.tick };
+  return { scene, interactables, movables, flicker, tick: decor.tick, setLight };
 }
 
 /** Piazzamento dei props dai dati ZONE1 (posizioni deterministiche). */

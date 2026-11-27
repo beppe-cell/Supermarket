@@ -32,11 +32,12 @@ describe("Inventory", () => {
 describe("Objectives", () => {
   it("avanza gli obiettivi in ordine", () => {
     const o = new Objectives();
+    expect(o.current?.id).toBe("scavenge"); o.complete("scavenge");
     expect(o.current?.id).toBe("find_key");
     expect(o.complete("find_key")?.done).toBe(true);
     expect(o.complete("find_key")).toBeUndefined();
     expect(o.current?.id).toBe("open_warehouse");
-    o.complete("open_warehouse"); expect(o.current).toBeUndefined();
+    o.complete("open_warehouse"); expect(o.current?.id).toBe("reach_warehouse"); o.complete("reach_warehouse"); expect(o.current).toBeUndefined();
   });
 });
 

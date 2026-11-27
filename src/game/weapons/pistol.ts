@@ -26,7 +26,9 @@ export interface HitReport {
 /** Pistola in prima persona (Beretta M9): viewmodel con sway/rinculo, ricarica, hitscan con dispersione, effetti e suoni. */
 export class Pistol {
   mag = MAG_SIZE;
-  reserve = 30;
+  reserve = 15;
+  /** La pistola va trovata nel negozio: finché non si raccoglie non si vede e non si spara. */
+  owned = false;
   private cooldown = 0;
   private reloadT = 0;
   private kick = 0;
@@ -56,6 +58,7 @@ export class Pistol {
     for (const m of container.meshes) { m.isPickable = false; m.renderingGroupId = 1; m.alwaysSelectAsActiveMesh = true; }
     const muzzle = new TransformNode("muzzle", scene); muzzle.parent = root; muzzle.position.copyFrom(MUZZLE);
     vm.position.set(0.13, -0.14, 0.3); vm.rotation.set(0.02, -0.04, 0);
+    vm.setEnabled(false);
     return new Pistol(scene, camera, vm, muzzle, new WeaponEffects(scene, muzzle, maxLights), sfx);
   }
 
@@ -67,6 +70,8 @@ export class Pistol {
   /** Fa partire una volta tutti gli effetti (lampo, scia, scintille, fumo) per compilare gli shader durante il caricamento, non al primo sparo. */
   warmUp(): void { this.fx.muzzleFlash(); this.fx.impactWorld(new Vector3(0, -60, 0), Vector3.Up()); this.fx.impactEnemy(new Vector3(0, -60, 0), Vector3.Down()); this.fx.tracer(this.muzzleWorld, new Vector3(0, -60, 0)); }
 
+  setOwned(v: boolean): void { this.owned = v; this.vm.setEnabled(v); }
+
   addAmmo(n: number): void { this.reserve += n; }
 
   /**
@@ -76,6 +81,7 @@ export class Pistol {
   update(dt: number, input: { fire: boolean; reload: boolean; aim?: boolean }, state: { moving: boolean; sprinting: boolean }, hooks: {
     onShot(): void; onRecoil(pitch: number, yaw: number): void; onReport(r: HitReport): void;
   }): void {
+    if (!this.owned) { this.fx.update(dt); return; }
     this.cooldown = Math.max(0, this.cooldown - dt);
     const wantFire = input.fire && !this.prevFire, wantReload = input.reload && !this.prevReload;
     this.prevFire = input.fire; this.prevReload = input.reload;

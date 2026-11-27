@@ -1,4 +1,6 @@
 const CSS = `
+.cd{position:absolute;top:calc(var(--st) + 44px);left:50%;transform:translateX(-50%);font:800 34px/1 ui-monospace,monospace;letter-spacing:.08em;color:#e6eef0;text-shadow:0 0 12px #000,0 2px 4px #000;padding:6px 16px;background:rgba(10,13,16,.45);border:1px solid rgba(255,255,255,.12);border-radius:6px;text-align:center}
+.cd.urgent{color:#ff5a4a;animation:pulse .5s infinite}
 .hud{position:fixed;inset:0;pointer-events:none;color:#dfeaee;font:500 14px/1.3 system-ui,-apple-system,sans-serif;z-index:4;user-select:none;-webkit-user-select:none}
 .hud *{box-sizing:border-box}
 .hud .plate{background:rgba(10,13,16,.55);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px}
@@ -91,11 +93,11 @@ export class Hud {
       <div class="prompt plate"><kbd>E</kbd><span class="ptxt"></span></div>
       <div class="toasts"></div>
       <div class="vitals plate">
-        <div class="vrow"><span class="ico">${I.heart}</span><div class="vbar hp"><b></b></div><span class="vnum hpn">100</span></div>
-        <div class="vrow"><span class="ico">${I.bolt}</span><div class="vbar stam"><b></b></div><span class="vnum" style="visibility:hidden">0</span></div>
+        <div class="vrow"><span class="ico">${I.heart}</span><div class="vbar hp"><b></b></div><span class="vnum hpn">100</span></div><span class="vnum" style="visibility:hidden">0</span></div>
       </div>
       <div class="weapon plate"><span class="wico">${I.gun}</span><div><span class="mag">15</span><span class="res">/ 30</span><div class="rl">RICARICA…</div></div></div>
       <div class="lock plate">Clicca per giocare<br><kbd>WASD</kbd> muovi · <kbd>Shift</kbd> corri · <kbd>Ctrl</kbd> accovacciati · <kbd>R</kbd> ricarica · <kbd>I</kbd> zaino</div>
+      <div class="cd" style="display:none"></div>
       <div class="dbg"></div>
       <div class="over"><div>SEI MORTO</div><small>Clicca o tocca per ricominciare</small></div>`;
     for (let i = 0; i < 8; i++) { const w = document.createElement("i"); w.style.transform = `rotate(${i * 45}deg)`; this.q("dmg").appendChild(w); }
@@ -103,6 +105,9 @@ export class Hud {
     parent.appendChild(this.root);
   }
 
+  setWeaponVisible(v: boolean): void { this.q("weapon").style.display = v ? "" : "none"; }
+  /** Conto alla rovescia grande (null = nascosto). */
+  setCountdown(text: string | undefined, urgent = false): void { const c = this.q("cd"); c.style.display = text ? "block" : "none"; if (text) { c.textContent = text; c.classList.toggle("urgent", urgent); } }
   setLockHint(v: boolean): void { this.q("lock").style.display = v ? "block" : "none"; }
   setVisible(v: boolean): void { this.root.style.display = v ? "" : "none"; }
   setDebug(t: string): void { this.q("dbg").textContent = t; }
@@ -111,7 +116,6 @@ export class Hud {
     const p = this.q("prompt"); p.style.display = text ? "flex" : "none";
     if (text) { this.q("ptxt").textContent = text; (p.querySelector("kbd") as HTMLElement).textContent = key; }
   }
-  setStamina(ratio: number): void { const b = this.q("stam"); (b.firstElementChild as HTMLElement).style.width = `${Math.round(ratio * 100)}%`; b.classList.toggle("low", ratio < 0.25); }
   setHealth(ratio: number, value: number): void {
     const b = this.q("hp"); (b.firstElementChild as HTMLElement).style.width = `${Math.round(ratio * 100)}%`; b.classList.toggle("low", ratio < 0.3);
     this.q("hpn").textContent = String(Math.ceil(value)); this.q("lowhp").classList.toggle("on", ratio < 0.3 && ratio > 0);
@@ -149,5 +153,7 @@ export class Hud {
     setTimeout(() => t.classList.add("out"), 2800); setTimeout(() => t.remove(), 3250);
   }
   showDeath(): void { this.q("over").style.display = "flex"; }
+  /** Schermata finale (vittoria): titolo e dettagli. */
+  showEnd(title: string, detail: string): void { const o = this.q("over"); o.style.color = "#7fd3a0"; o.innerHTML = `<div></div><small></small><small>Clicca o tocca per rigiocare</small>`; (o.children[0] as HTMLElement).textContent = title; (o.children[1] as HTMLElement).textContent = detail; o.style.display = "flex"; }
   get hurtAngle(): number { return this.lastHurtAngle; }
 }

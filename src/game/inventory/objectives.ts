@@ -3,8 +3,10 @@ export interface Objective { id: string; text: string; done: boolean }
 
 export class Objectives {
   readonly list: Objective[] = [
-    { id: "find_key", text: "Trova la chiave elettronica", done: false },
+    { id: "scavenge", text: "Al buio: trova armi e oggetti prima che si accendano le luci", done: false },
+    { id: "find_key", text: "Sopravvivi e trova la chiave elettronica", done: false },
     { id: "open_warehouse", text: "Apri la porta del magazzino", done: false },
+    { id: "reach_warehouse", text: "Raggiungi il magazzino", done: false },
   ];
   /** Segna un obiettivo come completato; ritorna l'obiettivo se è appena cambiato. */
   complete(id: string): Objective | undefined {
