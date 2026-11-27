@@ -76,6 +76,15 @@ export class Movable {
     this.collider.unfreezeWorldMatrix(); for (const p of this.parts) p.unfreezeWorldMatrix();
     applyHit(this.slider, dirX, dirZ, px, pz, this.kind === "SM_Trolley" ? 2.4 : 1.6);
   }
+  /** Raggio di contatto (m) dal centro. */
+  get reach(): number { return this.kind === "SM_Trolley" ? 0.55 : 0.6; }
+  /** Spinta continua del giocatore che ci cammina contro: la velocità tende a quella del giocatore (carrello leggero più veloce della gabbia), con rotazione dal punto di contatto. */
+  push(dirX: number, dirZ: number, speed: number, px: number, pz: number, dt: number): void {
+    this.collider.unfreezeWorldMatrix(); for (const p of this.parts) p.unfreezeWorldMatrix();
+    const s = this.slider, v = speed * (this.kind === "SM_Trolley" ? 0.95 : 0.8), k = Math.min(1, dt * 14);
+    s.vx += (dirX * v - s.vx) * k; s.vz += (dirZ * v - s.vz) * k;
+    const rx = px - s.x, rz = pz - s.z; s.w += (rx * dirZ - rz * dirX) * 2.2 * dt * speed;
+  }
   get moving(): boolean { return isMoving(this.slider); }
   /** Avanza la simulazione e aggiorna mesh e collisione. Ritorna la velocità d'urto (suoni). */
   step(dt: number, obstacles: readonly SBox[]): number {

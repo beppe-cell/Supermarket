@@ -22,6 +22,11 @@ describe("Zone1 data", () => {
       for (let i = 1; i < xs.length; i++) expect((xs[i] ?? 0) - (xs[i - 1] ?? 0) - 1.1).toBeGreaterThanOrEqual(3);
     }
   });
+  it("i pickup non sono dentro scaffali, casse, pilastri o muri", () => {
+    const boxes = [...ZONE1.shelves, ...ZONE1.checkouts, ...ZONE1.promo, ...ZONE1.produce, ...ZONE1.pillars, ...ZONE1.walls, ZONE1.cashOffice];
+    for (const p of ZONE1.pickups) { if (p.id === "key-warehouse") continue; for (const b of boxes) expect(Math.abs(p.x - b.x) < b.w / 2 + 0.2 && Math.abs(p.z - b.z) < b.d / 2 + 0.2, `${p.id} dentro ${b.x},${b.z}`).toBe(false); }
+  });
+  it("molte munizioni a terra (>= 15 scatole)", () => expect(ZONE1.pickups.filter((p) => p.id.startsWith("ammo")).length).toBeGreaterThanOrEqual(15));
   it("molte casse (>= 16) e una cassa centrale", () => {
     expect(ZONE1.checkouts.length).toBeGreaterThanOrEqual(16);
     expect(inside(ZONE1.cashOffice.x, ZONE1.cashOffice.z)).toBe(true);

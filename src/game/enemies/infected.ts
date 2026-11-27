@@ -11,6 +11,17 @@ import type { Sfx } from "../../core/audio/sfx";
 import type { Damageable, HitPart } from "../combat/damageable";
 
 export type EnemyState = "move" | "attack" | "hit" | "dead";
+
+/** Gruppo di 3–4 infetti: gira per il negozio verso un punto, finché uno di loro non nota il giocatore (allora attaccano e inseguono tutti). */
+export interface HordeGroup {
+  id: number;
+  field: Float32Array | undefined;     // campo di flusso verso il punto di passeggio corrente
+  waypoint: { x: number; z: number };
+  alerted: boolean;
+  loseT: number;
+  waitT: number;
+  arrived: boolean;
+}
 type Kind = "walk" | "shamble" | "run";
 
 export interface HordeContext {
@@ -22,6 +33,8 @@ export interface HordeContext {
   sfx: Sfx;
   hurtPlayer(amount: number, from: Vector3): void;
   others: readonly Infected[];
+  /** Un membro ha notato il giocatore: allerta tutto il gruppo. */
+  alert(g: HordeGroup): void;
 }
 
 const FACING_OFFSET = 0;                                   // il fronte del modello (glTF +Z) guarda +Z locale (verificato a vista)
@@ -29,6 +42,7 @@ const FACING_OFFSET = 0;                                   // il fronte del mode
 const ANIM_V: Record<Kind, number> = { walk: 1.15, shamble: 0.76, run: 2.14 };
 const SPEED: Record<Kind, number> = { walk: 1.15, shamble: 0.8, run: 2.35 };
 const LOOPS = new Set(["Idle", "Walk", "Shamble", "Run"]);
+const WANDER_SPEED = 0.55, SIGHT = 13, HEAR = 3.6, FOV_HALF = 1.25;
 const MELEE_RANGE = 1.35, MELEE_DAMAGE = 7;
 const DAMAGE: Record<HitPart, number> = { head: 70, torso: 34, legs: 24 };
 
@@ -47,6 +61,9 @@ export class Infected implements Damageable {
   private cooldown = 0; private attackT = 0; private attackHit = false; private hitT = 0; private deadT = 0;
   private growlT: number;
   private debugHold = false;
+  group!: HordeGroup;
+  /** Vede/sente il giocatore in questo frame (usato dal gruppo per decidere quando perdere le tracce). */
+  sees = false;
 
   private constructor(scene: Scene, readonly id: number, rnd: () => number) {
     this.root = new TransformNode(`infected${id}`, scene);
@@ -56,8 +73,9 @@ export class Infected implements Damageable {
     this.growlT = 2 + rnd() * 8;
   }
 
-  static create(scene: Scene, container: AssetContainer, id: number, x: number, z: number, yaw: number, rnd: () => number): Infected {
+  static create(scene: Scene, container: AssetContainer, id: number, x: number, z: number, yaw: number, rnd: () => number, group?: HordeGroup): Infected {
     const a = new Infected(scene, id, rnd);
+    if (group) a.group = group;
     const inst = container.instantiateModelsToScene((n) => `${n}_e${id}`, false, { doNotInstantiate: true });
     const model = inst.rootNodes[0]; if (model) model.parent = a.root;
     for (const g of inst.animationGroups) { g.stop(); a.groups.set(g.name.replace(/_e\d+$/, ""), g); }
@@ -99,7 +117,7 @@ export class Infected implements Damageable {
   /** Colpito da un proiettile. Ritorna true se muore con questo colpo. */
   hit(part: HitPart, ctx: { sfx: Sfx; player: Vector3 }): boolean {
     if (!this.alive) return false;
-    this.hp -= DAMAGE[part];
+    this.hp -= DAMAGE[part]; this.group.alerted = true; this.group.loseT = 0;
     if (this.hp <= 0) { this.die(ctx); return true; }
     if (this.state !== "attack" && Math.random() < 0.75) { this.state = "hit"; this.hitT = 0.5; this.play("Hit", 0.08); }
     return false;
@@ -135,19 +153,24 @@ export class Infected implements Damageable {
     const dx = pl.x - me.x, dz = pl.z - me.z, dist = Math.hypot(dx, dz);
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.growlT -= dt;
-    if (this.growlT <= 0) { this.growlT = 7 + Math.random() * 9; if (dist < 22) ctx.sfx.growl(dist, Math.max(-1, Math.min(1, Math.sin(angleTo({ x: pl.x, z: pl.z }, 0, { x: me.x, z: me.z }))))); }
+    if (this.growlT <= 0 && this.group.alerted) { this.growlT = 7 + Math.random() * 9; if (dist < 22) ctx.sfx.growl(dist, Math.max(-1, Math.min(1, Math.sin(angleTo({ x: pl.x, z: pl.z }, 0, { x: me.x, z: me.z }))))); }
 
     if (this.state === "hit") {
-      this.hitT -= dt; if (this.hitT <= 0) { this.state = "move"; this.play(this.kind === "run" ? "Run" : "Walk", 0.2); }
+      this.hitT -= dt; if (this.hitT <= 0) { this.state = "move"; this.group.alerted = true; this.play(this.kind === "run" ? "Run" : "Walk", 0.2); }
     } else if (this.state === "attack") {
       this.attackT += dt; this.turnTo(Math.atan2(dx, dz), 5, dt);
       if (!this.attackHit && this.attackT > 0.55) { this.attackHit = true; if (dist < MELEE_RANGE + 0.5 && ctx.playerAlive) ctx.hurtPlayer(MELEE_DAMAGE, this.root.position); }
       if (this.attackT > 1.25) { this.state = "move"; this.cooldown = 0.7 + Math.random() * 0.5; }
     } else {
-      // direzione desiderata: dritto sul giocatore se la linea è libera e vicino, altrimenti campo di flusso
+      // percezione: vicino (udito) oppure davanti, entro SIGHT e con linea libera (la torcia accesa li attira)
+      this.sees = ctx.playerAlive && (dist < HEAR || (dist < SIGHT && Math.abs(angleTo({ x: me.x, z: me.z }, this.yaw, { x: pl.x, z: pl.z })) < FOV_HALF && ctx.grid.lineClear({ x: me.x, z: me.z }, { x: pl.x, z: pl.z })));
+      if (this.sees && !this.group.alerted) { ctx.alert(this.group); this.growlT = 0; }
+      const chasing = this.group.alerted;
       let dir: { x: number; z: number } | undefined;
-      if (dist < 7 && ctx.grid.lineClear({ x: me.x, z: me.z }, { x: pl.x, z: pl.z })) dir = { x: dx / (dist || 1), z: dz / (dist || 1) };
-      else dir = ctx.grid.flowDir(ctx.field, me.x, me.z);
+      if (chasing) {
+        if (dist < 7 && ctx.grid.lineClear({ x: me.x, z: me.z }, { x: pl.x, z: pl.z })) dir = { x: dx / (dist || 1), z: dz / (dist || 1) };
+        else dir = ctx.grid.flowDir(ctx.field, me.x, me.z);
+      } else if (this.group.field && !this.group.arrived) dir = ctx.grid.flowDir(this.group.field, me.x, me.z);
       let sx = 0, sz = 0;                                               // separazione dai vicini (niente compenetrazione fra nemici)
       for (const o of ctx.others) {
         if (o === this || !o.alive) continue;
@@ -155,14 +178,16 @@ export class Infected implements Damageable {
         if (d2 < 0.64 && d2 > 1e-6) { const d = Math.sqrt(d2), k = (0.8 - d) / 0.8; sx += (ox / d) * k; sz += (oz / d) * k; }
       }
       let v = 0;
-      if (dir && dist > 1.0) {
+      if (dir && (!chasing || dist > 1.0)) {
         const tx = dir.x + sx * 1.6, tz = dir.z + sz * 1.6;
-        const diff = this.turnTo(Math.atan2(tx, tz), this.kind === "shamble" ? 3.2 : 4.6, dt);
-        v = SPEED[this.kind] * this.speedMul * Math.max(0, Math.cos(diff)) ** 1.5;
+        const diff = this.turnTo(Math.atan2(tx, tz), chasing ? (this.kind === "shamble" ? 3.2 : 4.6) : 1.8, dt);
+        const base = chasing ? SPEED[this.kind] : WANDER_SPEED;
+        v = base * this.speedMul * Math.max(0, Math.cos(diff)) ** 1.5;
         me.x += Math.sin(this.yaw) * v * dt; me.z += Math.cos(this.yaw) * v * dt;
-      } else this.turnTo(Math.atan2(dx, dz), 5, dt);
-      if (v < 0.1) this.play("Idle", 0.25); else { this.play(this.kind === "run" ? "Run" : this.kind === "shamble" ? "Shamble" : "Walk", 0.25); const g = this.groups.get(this.cur); if (g) g.speedRatio = Math.max(0.5, Math.min(1.9, v / ANIM_V[this.kind])); }
-      if (dist < MELEE_RANGE && this.cooldown <= 0 && ctx.playerAlive && Math.abs(angleTo({ x: me.x, z: me.z }, this.yaw, { x: pl.x, z: pl.z })) < 0.7) {
+      } else if (chasing) this.turnTo(Math.atan2(dx, dz), 5, dt);
+      const clip = chasing ? (this.kind === "run" ? "Run" : this.kind === "shamble" ? "Shamble" : "Walk") : "Shamble", ref = chasing ? this.kind : "shamble";
+      if (v < 0.08) this.play("Idle", 0.35); else { this.play(clip, 0.3); const g = this.groups.get(this.cur); if (g) g.speedRatio = Math.max(0.5, Math.min(1.9, v / ANIM_V[ref as Kind])); }
+      if (chasing && dist < MELEE_RANGE && this.cooldown <= 0 && ctx.playerAlive && Math.abs(angleTo({ x: me.x, z: me.z }, this.yaw, { x: pl.x, z: pl.z })) < 0.7) {
         this.state = "attack"; this.attackT = 0; this.attackHit = false; this.play(Math.random() < 0.5 ? "Attack" : "Swipe", 0.12); ctx.sfx.swing(dist, 0);
       }
     }

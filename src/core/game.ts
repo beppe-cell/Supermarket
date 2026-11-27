@@ -27,7 +27,7 @@ import type { Interactable } from "../game/interaction/interactable";
 
 /** Oggetti del livello → oggetti dell'inventario. */
 const PICKUP_ITEM: Record<string, string> = { "key-warehouse": "key_warehouse", "med-1": "gauze", "can-1": "canned_food", "alc-1": "alcohol" };
-const AMMO_PER_BOX = 12;
+const AMMO_PER_BOX = 15;
 
 export class Game {
   private engine!: Engine | WebGPUEngine;
@@ -73,8 +73,8 @@ export class Game {
     const pistolRef = pistol;
     loader.set(0.75, "Nemici");
     const infectedModel = await loadModel(scene, "SM_Infected");
-    // Orda dall'ingresso: dimensioni in base alla qualità/dispositivo (PC alta 40 totali, 20 vivi; telefono 24/10; bassa 12/6)
-    const hc = this.quality.id === "low" ? { total: 12, maxAlive: 6, waveSize: 3, interval: 7 } : this.touch || this.quality.id === "medium" ? { total: 24, maxAlive: 10, waveSize: 3, interval: 6 } : { total: 40, maxAlive: 20, waveSize: 5, interval: 6 };
+    // Orde a gruppi di 3–4: PC alta 6 gruppi (max 24 vivi), media/telefono 4 (14), bassa 2 (8)
+    const hc = this.quality.id === "low" ? { groups: 2, maxAlive: 8, interval: 25 } : this.touch || this.quality.id === "medium" ? { groups: 4, maxAlive: 14, interval: 22 } : { groups: 6, maxAlive: 24, interval: 20 };
     const horde = new Horde(scene, infectedModel, grid, hc);
     const enemies = horde.list;
 
@@ -138,7 +138,7 @@ export class Game {
         enemyTo: (i: number, x: number, z: number) => enemies[i]?.position.set(x, 0, z),
         gridInfo: (x0: number, z0: number, x1: number, z1: number) => [grid.lineClear({ x: x0, z: z0 }, { x: x1, z: z1 }), grid.isBlocked(x0, z0), grid.isBlocked(x1, z1)],
         startHorde: () => startHorde(),
-        hordeInfo: () => [horde.isStarted, horde.aliveCount, horde.remaining],
+        hordeInfo: () => [horde.isStarted, horde.aliveCount, horde.groupCount, horde.alertedCount],
         enemyPlay: (i: number, name: string, loop: boolean, yaw?: number, frac?: number) => enemies[i]?.debugPlay(name, loop, yaw, frac),
         setFire: (v: boolean) => { dbgFire = v; },
         setAim: (v: boolean) => { dbgAim = v; },
@@ -189,7 +189,7 @@ export class Game {
         const moving = input.moveX !== 0 || input.moveY !== 0;
         const sprinting = moving && input.sprint && player.stamina.canSprint && !input.crouch;
         if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload, aim: dbgAim }, { moving, sprinting }, {
-          onShot: () => { /* tutta l'orda insegue già il giocatore */ },
+          onShot: () => horde.alertNear(player.position.x, player.position.z, 24),
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {
             if (r.kind === "enemy" && r.enemy && r.part) { const killed = r.enemy.hit(r.part, { sfx, player: player.position }); hud.hitMarker(killed); }
@@ -210,6 +210,11 @@ export class Game {
         });
         // oggetti mobili (carrelli): fisica semplice, ostacoli = muri/scaffali/altri carrelli
         for (const m of level.movables) {
+          // spinta: camminandoci contro il carrello si sposta (come nella realtà)
+          if (!dead && player.intentSpeed > 0) {
+            const dx = m.slider.x - player.position.x, dz = m.slider.z - player.position.z, d = Math.hypot(dx, dz) || 1;
+            if (d < m.reach + 0.3 + 0.4 && (dx * player.intent.x + dz * player.intent.z) / d > 0.3) m.push(player.intent.x, player.intent.z, player.intentSpeed, player.position.x, player.position.z, dt);
+          }
           if (!m.moving) continue;
           const others = level.movables.filter((o) => o !== m).map((o) => ({ x: o.slider.x, z: o.slider.z, w: 0.7, d: 0.7 }));
           const impact = m.step(dt, [...obstacles, ...others]);

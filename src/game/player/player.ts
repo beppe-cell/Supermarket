@@ -52,6 +52,10 @@ export class Player {
     this.torch.parent = this.camera;
   }
 
+  /** Direzione (versore) e velocità volute dal giocatore in questo frame: servono a spingere i carrelli. */
+  readonly intent = new Vector3();
+  intentSpeed = 0;
+
   get alive(): boolean { return this.health > 0; }
   heal(n: number): void { this.health = Math.min(this.maxHealth, this.health + n); }
   damage(n: number): void { this.health = Math.max(0, this.health - n); }
@@ -88,6 +92,7 @@ export class Player {
     const len = Math.hypot(input.moveX, input.moveY) || 1;
     const fx = input.moveY / len, rx = input.moveX / len;
     this.move.set((sy * fx + cy * rx) * speed * dt, 0, (cy * fx - sy * rx) * speed * dt);
+    this.intentSpeed = moving ? speed : 0; this.intent.set(this.move.x / (speed * dt || 1), 0, this.move.z / (speed * dt || 1));
 
     this.vy = this.body.position.y <= 0.91 ? 0 : this.vy - GRAVITY * dt;
     this.move.y = this.vy * dt;

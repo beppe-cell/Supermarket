@@ -51,6 +51,15 @@ await page.evaluate(() => window.__dbg.setFire(true)); await page.waitForTimeout
 await page.waitForFunction((z0) => window.__dbg.carts().some((c) => c[0] === "SM_Trolley" && c[2] - z0 > 0.4), c0[2], { timeout: 40000 }).catch(() => {});
 const c1 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] - 4.4) < 1.5);
 check("carrello colpito si muove", c1[2] - c0[2] > 0.4, `z ${c0[2]} -> ${c1[2]}`);
+// spinta: camminando contro un carrello (x=-17.6,z=1.6) lo si sposta
+await page.evaluate(() => { window.__dbg.teleport(-17.6, -0.2); window.__dbg.look(0, 0); });
+await page.waitForTimeout(400);
+const q0 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] + 17.6) < 0.5);
+await page.keyboard.down("KeyW");
+await page.waitForFunction((z0) => window.__dbg.carts().some((c) => c[0] === "SM_Trolley" && c[2] - z0 > 0.8), q0[2], { timeout: 40000 }).catch(() => {});
+await page.keyboard.up("KeyW");
+const q1 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] + 17.6) < 1.5);
+check("il carrello si sposta spingendolo camminando", q1[2] - q0[2] > 0.8, `z ${q0[2]} -> ${q1[2]}`);
 check("nessun errore console", errors.length === 0, JSON.stringify(errors));
 await page.screenshot({ path: "tests/e2e/out-gameplay.png" });
 await browser.close();
