@@ -74,9 +74,10 @@ export class Game {
     loader.set(0.75, "Nemici");
     const infectedModel = await loadModel(scene, "SM_Infected");
     const enemies = [
-      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 9 }, [{ x: -4.4, z: -2 }, { x: -8.8, z: -2 }, { x: -8.8, z: 9 }, { x: -8.8, z: 12.3 }, { x: -4.4, z: 12.3 }, { x: -4.4, z: 9 }], Math.PI),
-      Infected.create(scene, infectedModel, 2, { x: 8.8, z: -4 }, [{ x: 8.8, z: 9 }, { x: 13.2, z: 9.5 }, { x: 13.2, z: -3 }, { x: 8.8, z: -3 }], 0),
-    ].slice(0, this.quality.maxActiveEnemies >= 2 ? 2 : 1);
+      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 11 }, [{ x: -4.4, z: 11 }, { x: -4.4, z: 1.5 }, { x: -13.2, z: 1.5 }, { x: -13.2, z: 10 }, { x: -13.2, z: 15.2 }, { x: -4.4, z: 15.2 }], Math.PI),
+      Infected.create(scene, infectedModel, 2, { x: 8.8, z: 11 }, [{ x: 8.8, z: 11 }, { x: 8.8, z: 1.5 }, { x: 17.6, z: 1.5 }, { x: 17.6, z: -4 }, { x: 17.6, z: 10 }, { x: 13.2, z: 15.2 }, { x: 8.8, z: 15.2 }], 0),
+      Infected.create(scene, infectedModel, 3, { x: 22, z: -4 }, [{ x: 22, z: -4 }, { x: 22, z: 12 }, { x: 26.4, z: 12 }, { x: 26.4, z: -4 }], 0),
+    ].slice(0, this.quality.id === "low" ? 1 : this.quality.id === "medium" || this.touch ? 2 : 3);
 
     // --- HUD, inventario, obiettivi ---
     const hud = new Hud(document.body, dev.isTouch);

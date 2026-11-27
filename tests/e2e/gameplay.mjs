@@ -20,14 +20,14 @@ const p1 = await page.evaluate(() => window.__dbg.pos());
 check("cammina avanti (+z)", p1[2] - p0[2] > 0.8, `z ${p0[2].toFixed(1)} -> ${p1[2].toFixed(1)}`);
 
 // collisione col muro sud: teletrasporto vicino al muro e spinta indietro
-await page.evaluate(() => window.__dbg.teleport(0, -14));
+await page.evaluate(() => window.__dbg.teleport(-5.75, -22.8));
 await page.waitForTimeout(300);
 await page.keyboard.down("KeyS"); await page.waitForTimeout(2500); await page.keyboard.up("KeyS");
 const p2 = await page.evaluate(() => window.__dbg.pos());
-check("muro sud blocca", p2[2] > -15, `z=${p2[2].toFixed(2)}`);
+check("muro sud blocca", p2[2] > -24, `z=${p2[2].toFixed(2)}`);
 
 // corsia tra due blocchi di scaffali (x=-13.2): si deve poter percorrere in lunghezza
-await page.evaluate(() => { window.__dbg.teleport(-13.2, -3); window.__dbg.look(0, 0); });
+await page.evaluate(() => { window.__dbg.teleport(-13.2, -5.5); window.__dbg.look(0, 0); });
 await page.waitForTimeout(300);
 const a0 = await page.evaluate(() => window.__dbg.pos());
 await page.keyboard.down("KeyW");
@@ -37,14 +37,14 @@ const a1 = await page.evaluate(() => window.__dbg.pos());
 check("percorre la corsia scaffali", a1[2] - a0[2] > 1.0 && Math.abs(a1[0] + 13.2) < 0.5, `z ${a0[2].toFixed(1)} -> ${a1[2].toFixed(1)}, x ${a1[0].toFixed(2)}`);
 
 // pickup: vicino alla batteria, guardando avanti (+z) -> pickup a (3,1.2,-4)
-await page.evaluate(() => window.__dbg.teleport(4.4, -5.2));
-await page.evaluate(() => window.__dbg.look(0, Math.atan2(0.45, 1.2)));
+await page.evaluate(() => window.__dbg.teleport(-13.2, -3.5));
+await page.evaluate(() => window.__dbg.look(0, 0));
 await page.waitForTimeout(500);
 await page.waitForTimeout(500);
 const inv = await page.evaluate(() => window.__dbg.inventory());
 check("raccoglie oggetto passandoci vicino", inv.includes("gauze"), JSON.stringify(inv));
 // carrello colpito da un proiettile: si deve muovere
-await page.evaluate(() => { window.__dbg.teleport(4.4, -3.6); window.__dbg.look(0, Math.atan2(1.65 - 0.5, 3.0)); });
+await page.evaluate(() => { window.__dbg.teleport(4.4, -4.9); window.__dbg.look(0, Math.atan2(1.65 - 0.5, 3.0)); });
 await page.waitForTimeout(400);
 const c0 = (await page.evaluate(() => window.__dbg.carts())).find((c) => c[0] === "SM_Trolley" && Math.abs(c[1] - 4.4) < 0.3);
 await page.evaluate(() => window.__dbg.setFire(true)); await page.waitForTimeout(300); await page.evaluate(() => window.__dbg.setFire(false));

@@ -150,6 +150,8 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   boxes(ZONE1.pillars, "pillars", wallM);
   boxes(ZONE1.checkouts, "checkouts", counterM);
   boxes(ZONE1.freezers, "freezers", freezerM);
+  boxes([ZONE1.cashOffice], "cash-office", counterM);
+  boxes(ZONE1.produce, "produce-tables", counterM);
 
   // Neon (strisce emissive unite) + luci dinamiche limitate dal profilo
   const strips = ZONE1.neons.map((n, i) => {
@@ -276,7 +278,7 @@ function placeProps(props: Props, q: QualityProfile, scene: Scene): Movable[] {
     c.position.set(e.x, 0.95 + 0.33, e.z); c.rotation.y = -e.yaw; c.isVisible = false; c.checkCollisions = true; c.freezeWorldMatrix();
   }
   // Scatoloni lungo il muro ovest (posizioni fisse, nessun random)
-  [-12, -9, -4, 0, 5, 9, 12].forEach((z, i) => props.spawn(i % 2 ? "SM_Box_Closed" : "SM_Box_Open", -19.3, z, i * 0.4));
+  [-20, -16, -9, 6, 14, 20].forEach((z, i) => props.spawn(i % 2 ? "SM_Box_Closed" : "SM_Box_Open", -31.3, z, i * 0.4));
   return movables;
 }
 

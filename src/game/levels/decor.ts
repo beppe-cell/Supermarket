@@ -14,7 +14,7 @@ import cartonsUrl from "../../../assets/exported/textures/cartons.jpg?url";
 import fridgesUrl from "../../../assets/exported/textures/fridges.jpg?url";
 import keycardUrl from "../../../assets/exported/textures/keycard.png?url";
 import decalsUrl from "../../../assets/exported/textures/decals.png?url";
-import { ZONE1 } from "./zone1";
+import { ZONE1, type Box } from "./zone1";
 
 /** Rettangolo in pixel (x0,y0,x1,y1) di una texture 1024×1024 → UV Babylon (v verso l'alto). */
 const uv = (r: [number, number, number, number]): Vector4 => new Vector4(r[0] / 1024, 1 - r[3] / 1024, r[2] / 1024, 1 - r[1] / 1024);
@@ -28,25 +28,25 @@ const SIGN: Record<string, [number, number, number, number]> = {
 
 // --- cartoni e casse (cartons.jpg): celle 256 px, indice = riga*4 + colonna ----------------------------------------------
 const cell = (i: number): [number, number, number, number] => { const c = i % 4, r = Math.floor(i / 4); return [c * 256 + 6, r * 256 + 6, c * 256 + 250, r * 256 + 250]; };
-interface Stack { x: number; z: number; yaw: number; kinds: number[][]; }  // kinds[livello] = celle dei lati per ogni scatola del livello
 const BRAND = [4, 5, 6, 7];
 
 // --- decalcomanie (decals.png): celle 256 px; solo quelle su fondo nero ---------------------------------------------------
 const DECALS: { cell: number; x: number; z: number; size: number; rot: number }[] = [
-  { cell: 3, x: -4.4, z: -9.0, size: 1.7, rot: 0.4 }, { cell: 6, x: -4.0, z: -6.6, size: 0.9, rot: 2.2 }, { cell: 5, x: -4.7, z: -7.6, size: 0.7, rot: 0.0 },
-  { cell: 4, x: -8.8, z: 2.0, size: 2.2, rot: 1.9 }, { cell: 7, x: -8.6, z: 5.5, size: 1.5, rot: 0.3 }, { cell: 2, x: -13.2, z: 6.0, size: 1.6, rot: 5.0 },
+  { cell: 3, x: -5.75, z: -16.5, size: 1.7, rot: 0.4 }, { cell: 6, x: -5.5, z: -14.6, size: 0.9, rot: 2.2 }, { cell: 5, x: -6.0, z: -15.4, size: 0.7, rot: 0.0 },
+  { cell: 4, x: -8.8, z: 4.0, size: 2.2, rot: 1.9 }, { cell: 7, x: -8.6, z: 8.5, size: 1.5, rot: 0.3 }, { cell: 2, x: -13.2, z: 6.0, size: 1.6, rot: 5.0 },
   { cell: 0, x: 4.4, z: -3.0, size: 1.3, rot: 1.2 }, { cell: 1, x: 4.3, z: 0.5, size: 1.4, rot: 3.0 }, { cell: 3, x: 13.2, z: 7.0, size: 1.9, rot: 2.7 },
-  { cell: 12, x: -2.0, z: -12.0, size: 1.8, rot: 0.8 }, { cell: 14, x: 0.5, z: 10.8, size: 1.6, rot: 1.0 }, { cell: 9, x: -17.0, z: -12.0, size: 1.5, rot: 0.0 },
-  { cell: 10, x: 8.8, z: 11.0, size: 1.3, rot: 0.2 }, { cell: 11, x: 12.0, z: -8.5, size: 1.8, rot: 4.0 }, { cell: 13, x: 15.5, z: -2.0, size: 1.0, rot: 0.0 },
-  { cell: 5, x: 11.0, z: -8.0, size: 0.8, rot: 1.0 }, { cell: 2, x: 0.5, z: -5.8, size: 1.3, rot: 2.0 },
+  { cell: 12, x: -2.0, z: -20.0, size: 1.8, rot: 0.8 }, { cell: 14, x: 0.5, z: 15.8, size: 1.6, rot: 1.0 }, { cell: 9, x: -22, z: -9.0, size: 1.5, rot: 0.0 },
+  { cell: 10, x: 8.8, z: 11.0, size: 1.3, rot: 0.2 }, { cell: 11, x: 12.0, z: -8.5, size: 1.8, rot: 4.0 }, { cell: 13, x: 24.5, z: -2.0, size: 1.0, rot: 0.0 },
+  { cell: 5, x: 11.0, z: -8.0, size: 0.8, rot: 1.0 }, { cell: 2, x: 0.5, z: 1.8, size: 1.3, rot: 2.0 }, { cell: 4, x: 17.6, z: 3.0, size: 2.0, rot: 0.6 },
+  { cell: 1, x: -22, z: 10.0, size: 1.4, rot: 2.4 }, { cell: 3, x: -26.4, z: 6.0, size: 1.8, rot: 1.4 }, { cell: 6, x: 22, z: -4.0, size: 1.0, rot: 3.6 },
+  { cell: 14, x: -17.6, z: -3.0, size: 1.5, rot: 0.9 }, { cell: 12, x: 13.2, z: 18.0, size: 1.7, rot: 2.1 }, { cell: 7, x: 0, z: 5.0, size: 1.6, rot: 4.2 },
+  { cell: 0, x: -13.2, z: 15.8, size: 1.1, rot: 0.5 }, { cell: 3, x: 29.5, z: 0.0, size: 2.0, rot: 1.0 }, { cell: 4, x: -30, z: 14, size: 1.8, rot: 0.2 },
 ];
 const decalUv = (i: number): Vector4 => { const c = i % 4, r = Math.floor(i / 4); return uv([c * 256 + 4, r * 256 + 4, c * 256 + 252, r * 256 + 252]); };
 
-const STACKS: Stack[] = [
-  { x: -18.8, z: -13.6, yaw: 0.1, kinds: [[4, 5], [6]] }, { x: -17.2, z: -14.1, yaw: -0.15, kinds: [[7, 4]] },
-  { x: 18.6, z: -13.7, yaw: 0.05, kinds: [[5, 6], [7, 4], [5]] }, { x: 16.0, z: -14.2, yaw: 0.2, kinds: [[6]] },
-  { x: -18.9, z: 12.2, yaw: 0.0, kinds: [[7, 5], [4]] }, { x: 18.7, z: 12.3, yaw: -0.1, kinds: [[4, 6], [5, 7]] },
-  { x: 18.9, z: 10.4, yaw: 0.2, kinds: [[8]] }, { x: -18.9, z: 10.2, yaw: 0.1, kinds: [[9], [9]] },
+/** Pile negli angoli (non percorsi dai nemici). */
+const CORNER_STACKS: Box[] = [
+  { x: -30.8, z: -22.8, w: 1.6, d: 1.0, h: 1.2 }, { x: 30.8, z: -22.8, w: 1.6, d: 1.0, h: 1.6 }, { x: -30.8, z: 22.4, w: 1.6, d: 1.0, h: 1.2 }, { x: 30.8, z: 22.4, w: 1.6, d: 1.0, h: 1.2 },
 ];
 
 /** Cartelli, scatoloni, decalcomanie sporche, fronti di frigoriferi e casse: tutte texture generate con Gemini. */
@@ -82,27 +82,78 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
       cable.position.set(x + dx * Math.cos(rotY), y + h / 2 + len / 2, z - dx * Math.sin(rotY)); signParts.push(cable);
     }
   };
-  const aisles = [-13.2, -8.8, -4.4, 0, 4.4, 8.8, 13.2], names = ["aisle1", "aisle2", "aisle3", "aisle4", "beverages", "canned", "frozen"];
-  aisles.forEach((x, i) => sign(names[i] as string, 0.95, x, 2.75, -5.7, Math.PI, true));
-  sign("exit", 0.9, -15, 2.85, -14.78, Math.PI); sign("warehouse", 1.1, 19.78, 2.2, 0, Math.PI / 2);
-  sign("checkout1", 0.55, 8.5, 2.7, -11, Math.PI, true); sign("checkout2", 0.55, 11.5, 2.7, -11, Math.PI, true);
-  sign("offer", 1.3, 5, 2.3, -14.78, Math.PI); sign("bakery", 1.0, 0, 2.5, 14.78, 0);
+  const names = ["aisle1", "aisle2", "aisle3", "aisle4", "beverages", "canned", "frozen", "bakery"];
+  ZONE1.aisleX.forEach((x, i) => sign(names[i % 8] as string, 0.95, x, 2.75, -7.1, Math.PI, true));          // all'imbocco di ogni corsia (lato casse)
+  ZONE1.aisleX.forEach((x, i) => sign(names[(i + 3) % 8] as string, 0.95, x, 2.75, 14.6, 0, true));          // e sul lato retro
+  sign("exit", 0.9, 0, 2.95, -23.78, Math.PI); sign("warehouse", 1.1, 31.78, 2.2, 0, Math.PI / 2);
+  ZONE1.checkouts.forEach((c, i) => sign(i % 2 ? "checkout2" : "checkout1", 0.5, c.x, 2.75, c.z, Math.PI, true));
+  for (const x of [-15, 15]) sign("offer", 1.3, x, 2.5, -18.6, Math.PI, true);
+  sign("offer", 1.3, -9.5, 2.4, -23.78, Math.PI); sign("offer", 1.3, 9.5, 2.4, -23.78, Math.PI);
+  for (const x of [-13.2, 0, 13.2]) sign("frozen", 1.2, x, 2.75, 23.78, 0);
   merge(signParts, "signs", signM);
 
-  // Scatoloni a pila (brand, casse di legno/plastica)
+  // Pile di cartoni/casse: isole promozionali all'ingresso, banchi ortofrutta, angoli. Una sola mesh grafica, collisione = una scatola per isola.
   const cartonM = std("cartons", tex(cartonsUrl));
   const top = uv(cell(0)), taped = uv(cell(15)); const cartonParts: Mesh[] = [];
-  for (const s of STACKS) {
-    s.kinds.forEach((level, li) => level.forEach((c, bi) => {
-      const crate = c >= 8; const w = crate ? 0.6 : 0.5, h = crate ? 0.34 : 0.4, d = crate ? 0.4 : 0.42;
-      const side = uv(cell(c));
-      const box = MeshBuilder.CreateBox(`carton-${s.x}-${li}-${bi}`, { width: w, height: h, depth: d, faceUV: [side, side, side, side, li === 0 && bi === 0 ? taped : top, top] }, scene);
-      const lx = (bi - (level.length - 1) / 2) * (w + 0.02), ly = li * (h + 0.005) + h / 2;
-      box.position.set(s.x + Math.cos(s.yaw) * lx, ly, s.z - Math.sin(s.yaw) * lx); box.rotation.y = s.yaw + li * 0.07;
+  const fill = (b: Box, cells: number[], seed: number): void => {
+    const cw = 0.5, cd = 0.42, ch = 0.4;
+    const cols = Math.max(1, Math.floor(b.w / (cw + 0.02))), rows = Math.max(1, Math.floor(b.d / (cd + 0.02))), lv = Math.max(1, Math.round((b.h ?? 1) / ch));
+    const ox = b.x - (cols * (cw + 0.02)) / 2 + cw / 2 + 0.01, oz = b.z - (rows * (cd + 0.02)) / 2 + cd / 2 + 0.01;
+    for (let l = 0; l < lv; l++) for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const hsh = (c * 7 + r * 3 + l * 5 + seed) >>> 0, cellId = cells[hsh % cells.length] as number, crate = cellId >= 8;
+      const w = crate ? 0.6 : cw, h = crate ? 0.34 : ch, d = crate ? 0.4 : cd, side = uv(cell(cellId));
+      if (crate && c * (cw + 0.02) + w > cols * (cw + 0.02)) continue;
+      const box = MeshBuilder.CreateBox(`carton-${b.x}-${l}-${r}-${c}`, { width: w, height: h, depth: d, faceUV: [side, side, side, side, l === lv - 1 && (hsh % 3 === 0) ? taped : top, top] }, scene);
+      box.position.set(ox + c * (cw + 0.02), l * (ch + 0.004) + h / 2, oz + r * (cd + 0.02)); box.rotation.y = ((hsh % 7) - 3) * 0.012;
       cartonParts.push(box);
-    }));
+    }
+    const col = MeshBuilder.CreateBox(`carton-col-${b.x}-${b.z}`, { width: b.w, depth: b.d, height: b.h ?? 1 }, scene);
+    col.position.set(b.x, (b.h ?? 1) / 2, b.z); col.isVisible = false; col.checkCollisions = true; col.isPickable = false; col.freezeWorldMatrix();
+  };
+  ZONE1.promo.forEach((b, i) => fill(b, BRAND, i * 11));
+  ZONE1.produce.forEach((b, i) => fill(b, [8, 9, 10, 8], i * 5));
+  CORNER_STACKS.forEach((b, i) => fill(b, [...BRAND, 8, 9], i * 13));
+  merge(cartonParts, "cartons", cartonM, false);
+
+  // Cassa centrale: cabina a vetri sopra il banco (cornice, vetri, tetto) + striscioni con testo (canvas)
+  {
+    const o = ZONE1.cashOffice, hy = o.h ?? 1.15, top2 = 2.75, hh = top2 - hy;
+    const glassM = new StandardMaterial("glass", scene); glassM.diffuseColor = new Color3(0.5, 0.65, 0.72); glassM.alpha = 0.18; glassM.specularColor = new Color3(0.9, 0.9, 0.9); glassM.specularPower = 80; glassM.backFaceCulling = false;
+    const frameM = new StandardMaterial("glass-frame", scene); frameM.diffuseColor = new Color3(0.13, 0.15, 0.17); frameM.specularColor = new Color3(0.2, 0.2, 0.2);
+    const panes: Mesh[] = [], frames: Mesh[] = [];
+    const pane = (w: number, x: number, z: number, rotY: number): void => { const m = MeshBuilder.CreatePlane(`pane-${x}-${z}`, { width: w, height: hh, sideOrientation: Mesh.DOUBLESIDE }, scene); m.position.set(x, hy + hh / 2, z); m.rotation.y = rotY; panes.push(m); };
+    pane(o.w, o.x, o.z - o.d / 2 + 0.05, 0); pane(o.w, o.x, o.z + o.d / 2 - 0.05, 0); pane(o.d, o.x - o.w / 2 + 0.05, o.z, Math.PI / 2); pane(o.d, o.x + o.w / 2 - 0.05, o.z, Math.PI / 2);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pst = MeshBuilder.CreateBox(`post-${sx}-${sz}`, { width: 0.1, height: hh, depth: 0.1 }, scene); pst.position.set(o.x + sx * (o.w / 2 - 0.05), hy + hh / 2, o.z + sz * (o.d / 2 - 0.05)); frames.push(pst); }
+    const roof = MeshBuilder.CreateBox("cash-roof", { width: o.w + 0.3, height: 0.12, depth: o.d + 0.3 }, scene); roof.position.set(o.x, top2 + 0.06, o.z); frames.push(roof);
+    for (const z of [-1, 1]) { const rail = MeshBuilder.CreateBox("cash-rail", { width: o.w, height: 0.06, depth: 0.06 }, scene); rail.position.set(o.x, hy + 1.0, o.z + z * (o.d / 2 - 0.05)); frames.push(rail); }
+    merge(panes, "cash-glass", glassM); merge(frames, "cash-frame", frameM);
   }
-  merge(cartonParts, "cartons", cartonM, true); void BRAND;
+  const banner = (title: string, sub: string, w: number, h: number, x: number, y: number, z: number, rotY: number, bg: string, hang = true): void => {
+    const px = 1024, py = Math.round((1024 * h) / w);
+    const t = new DynamicTexture(`banner-${title}`, { width: px, height: py }, scene, true); const c = t.getContext() as unknown as CanvasRenderingContext2D;
+    c.fillStyle = bg; c.fillRect(0, 0, px, py); c.strokeStyle = "rgba(255,255,255,0.55)"; c.lineWidth = 10; c.strokeRect(12, 12, px - 24, py - 24);
+    c.fillStyle = "#f2f6f5"; c.textAlign = "center"; c.font = `bold ${Math.round(py * 0.42)}px sans-serif`; c.fillText(title, px / 2, py * (sub ? 0.56 : 0.66));
+    if (sub) { c.font = `600 ${Math.round(py * 0.17)}px sans-serif`; c.fillStyle = "rgba(255,255,255,0.8)"; c.fillText(sub, px / 2, py * 0.86); }
+    t.update();
+    const m = new StandardMaterial(`banner-${title}`, scene); m.diffuseTexture = t; m.emissiveTexture = t; m.emissiveColor = new Color3(0.35, 0.35, 0.35); m.specularColor = Color3.Black(); m.backFaceCulling = true;
+    for (const side of [0, 1]) {
+      const pl = MeshBuilder.CreatePlane(`banner-${title}-${side}`, { width: w, height: h }, scene);
+      const nx = Math.sin(rotY), nz = Math.cos(rotY); const off = side ? 0.02 : -0.02;           // le due facce leggibili da entrambi i lati
+      pl.position.set(x + nx * off * -1, y, z + nz * off * -1); pl.rotation.y = rotY + (side ? Math.PI : 0); pl.material = m; pl.isPickable = false; pl.freezeWorldMatrix();
+    }
+    if (hang) for (const dx of [-w * 0.42, w * 0.42]) {
+      const len = ZONE1.ceiling - (y + h / 2); const cable = MeshBuilder.CreateBox(`bcable-${title}-${dx}`, { width: 0.014, height: len, depth: 0.014 }, scene);
+      cable.position.set(x + dx * Math.cos(rotY), y + h / 2 + len / 2, z - dx * Math.sin(rotY)); cable.material = frameM2(); cable.isPickable = false; cable.freezeWorldMatrix();
+    }
+  };
+  let _fm: StandardMaterial | undefined; const frameM2 = (): StandardMaterial => (_fm ??= (() => { const m = new StandardMaterial("cable", scene); m.diffuseColor = new Color3(0.1, 0.11, 0.12); return m; })());
+  banner("PROMOZIONI", "OFFERTE DELLA SETTIMANA", 5.2, 1.2, 0, 3.0, -16.4, 0, "#a3171c");
+  banner("CASSA CENTRALE", "SERVIZIO CLIENTI · RESI", 4.4, 0.9, 0, 3.2, -9.9, 0, "#1d3a6b");
+  banner("CASSE", "", 2.2, 0.6, -17, 3.05, -9.2, 0, "#1d3a6b"); banner("CASSE", "", 2.2, 0.6, 17, 3.05, -9.2, 0, "#1d3a6b");
+  banner("ORTOFRUTTA", "FRESCO", 3.0, 0.8, -30.3, 3.1, 4.5, Math.PI / 2, "#25643a");
+  banner("SURGELATI", "BANCO FRIGO", 3.4, 0.8, 0, 3.15, 22.3, Math.PI, "#1d5f78");
+  banner("BEVANDE", "ACQUA · BIBITE", 3.0, 0.8, 27.6, 3.0, -14, -Math.PI / 2, "#7a5a16");
+  banner("MAGAZZINO", "SOLO PERSONALE", 3.0, 0.8, 31.5, 3.2, 0, -Math.PI / 2, "#6e1d20", false);
 
   // Decalcomanie sul pavimento
   const decalM = std("decals", tex(decalsUrl, true)); decalM.useAlphaFromDiffuseTexture = true; decalM.specularColor = Color3.Black(); decalM.zOffset = -2; decalM.backFaceCulling = false;
