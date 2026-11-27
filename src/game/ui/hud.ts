@@ -1,5 +1,7 @@
 const CSS = `
 .cd{position:absolute;top:calc(var(--st) + 44px);left:50%;transform:translateX(-50%);font:800 34px/1 ui-monospace,monospace;letter-spacing:.08em;color:#e6eef0;text-shadow:0 0 12px #000,0 2px 4px #000;padding:6px 16px;background:rgba(10,13,16,.45);border:1px solid rgba(255,255,255,.12);border-radius:6px;text-align:center}
+.cd{transition:all .6s ease}
+.cd.small{top:var(--st);left:var(--sx);transform:none;font-size:15px;letter-spacing:.04em;padding:4px 9px;background:rgba(10,13,16,.35)}
 .cd.urgent{color:#ff5a4a;animation:pulse .5s infinite}
 .hud{position:fixed;inset:0;pointer-events:none;color:#dfeaee;font:500 14px/1.3 system-ui,-apple-system,sans-serif;z-index:4;user-select:none;-webkit-user-select:none}
 .hud *{box-sizing:border-box}
@@ -107,7 +109,7 @@ export class Hud {
 
   setWeaponVisible(v: boolean): void { this.q("weapon").style.display = v ? "" : "none"; }
   /** Conto alla rovescia grande (null = nascosto). */
-  setCountdown(text: string | undefined, urgent = false): void { const c = this.q("cd"); c.style.display = text ? "block" : "none"; if (text) { c.textContent = text; c.classList.toggle("urgent", urgent); } }
+  setCountdown(text: string | undefined, urgent = false, small = false): void { const c = this.q("cd"); c.style.display = text ? "block" : "none"; if (text) { c.textContent = text; c.classList.toggle("urgent", urgent); c.classList.toggle("small", small); } }
   setLockHint(v: boolean): void { this.q("lock").style.display = v ? "block" : "none"; }
   setVisible(v: boolean): void { this.root.style.display = v ? "" : "none"; }
   setDebug(t: string): void { this.q("dbg").textContent = t; }

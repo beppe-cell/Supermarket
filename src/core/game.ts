@@ -188,7 +188,7 @@ export class Game {
         time += dt; runTime += dt;
         if (phase === "dark") {
           darkLeft -= dt; const sec = Math.max(0, Math.ceil(darkLeft));
-          hud.setCountdown(`APERTURA TRA 0:${String(sec).padStart(2, "0")}`, darkLeft < 10);
+          hud.setCountdown(`APERTURA TRA 0:${String(sec).padStart(2, "0")}`, darkLeft < 10, darkLeft < 28);   // dopo 2 s si rimpicciolisce in un angolo
           ambienceT -= dt;                                  // fuori dalle porte: ringhi e colpi, sempre più frequenti
           if (ambienceT <= 0) { ambienceT = 1.2 + 3.2 * (darkLeft / 30) + Math.random() * 1.5; if (Math.random() < 0.5) sfx.growl(24, Math.random() * 2 - 1); else sfx.clank(1.6 + (1 - darkLeft / 30) * 2, 22); }
           if (darkLeft <= 0) {
