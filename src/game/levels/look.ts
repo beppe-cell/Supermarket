@@ -33,8 +33,8 @@ export const LOOKS: Record<LookPreset["id"], LookPreset> = {
   },
   c: {
     id: "c", name: "C — Grigio freddo e sangue (neon bianco gelido, accenti rossi diffusi)",
-    ambient: 0.26, ambientDiffuse: [0.7, 0.75, 0.85], fogDensity: 0.03, fogColor: [0.06, 0.06, 0.08], clear: [0.025, 0.025, 0.035],
-    neonColor: "#f2f6ff", neonLightColor: [0.82, 0.88, 1], neonIntensity: 0.5, emergencyIntensity: 0.8, torchIntensity: 1.6,
+    ambient: 0.09, ambientDiffuse: [0.55, 0.6, 0.72], fogDensity: 0.04, fogColor: [0.03, 0.03, 0.045], clear: [0.012, 0.012, 0.02],
+    neonColor: "#b8c2d8", neonLightColor: [0.82, 0.88, 1], neonIntensity: 0.26, emergencyIntensity: 0, torchIntensity: 3.4,
     floor: "#3b3e45", wall: "#5b6068", shelf: "#6b7079", ceiling: "#25282d",
   },
 };

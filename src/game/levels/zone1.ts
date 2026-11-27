@@ -78,7 +78,8 @@ export const ZONE1 = {
   ] as { x: number; z: number; yaw: number }[],
   /** Neon: ogni punto genera una striscia emissiva; alcuni anche luce dinamica. */
   neons: [-28, -20, -12, -4, 4, 12, 20, 28].flatMap((x) => [-20, -13, -4, 3, 9, 15, 21].map((z): LightDef => ({ x, z }))),
-  emergencyLights: [{ x: 30, z: 0 }, { x: -30, z: -22 }, { x: -30, z: 22 }, { x: 0, z: 22 }, { x: 0, z: -9 }] as LightDef[],
+  /** Luci di emergenza rosse lampeggianti: tolte su richiesta dell'AD. */
+  emergencyLights: [] as LightDef[],
 };
 
 export type Zone1Data = typeof ZONE1;

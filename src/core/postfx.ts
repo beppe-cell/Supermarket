@@ -36,7 +36,7 @@ export function createPostFx(scene: Scene, camera: Camera, q: QualityProfile, to
   const ip = pipe.imageProcessing;
   ip.vignetteEnabled = true; ip.vignetteWeight = 2.2; ip.vignetteStretch = 0.4; ip.vignetteColor = new Color4(0, 0, 0, 0); ip.vignetteBlendMode = 0;
   ip.toneMappingEnabled = true; ip.toneMappingType = 1; // ACES
-  ip.exposure = 1.6; ip.contrast = 1.1;
+  ip.exposure = 1.3; ip.contrast = 1.1;
 
   if (pp.ssao && !touch) {
     const ssao = new SSAO2RenderingPipeline("ssao", scene, { ssaoRatio: 0.5, blurRatio: 1 }, [camera]);

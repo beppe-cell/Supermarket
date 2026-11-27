@@ -128,17 +128,19 @@ def build_animations(arm, arm_drop_deg=None):
     HIP = [(0.00, 24), (0.12, 19), (0.30, 4), (0.50, -12), (0.62, -9), (0.78, 8), (0.90, 20)]
     KNEE = [(0.00, 4), (0.10, 15), (0.28, 7), (0.45, 9), (0.60, 38), (0.72, 60), (0.84, 40), (0.94, 12)]
     ANKLE = [(0.00, 3), (0.08, -7), (0.28, 5), (0.46, 9), (0.60, -15), (0.70, -9), (0.84, 2), (0.94, 4)]
-    def gait(ph, k_hip, k_knee, bob, lean, elbow, arm_sw, pelv_yaw, pelv_obl, torso_ctr, shoulder_sway, lift, arm_bias, head_roll, flight=0.0):
+    def gait(ph, k_hip, k_knee, bob, lean, elbow, arm_sw, pelv_yaw, pelv_obl, torso_ctr, shoulder_sway, lift, arm_bias, head_roll, flight=0.0, limp=0.0, head_drop=0.0, arm_asym=0.0):
         for sd, off in (("l", 0.0), ("r", 0.5)):
             p = ph + off
-            flex(f"thigh_stretch.{sd}", cr(HIP, p) * k_hip)
-            flex(f"leg_stretch.{sd}", -cr(KNEE, p) * k_knee)
-            flex(f"foot.{sd}", cr(ANKLE, p) * (0.8 + 0.2 * k_hip) )
+            w = (1 - 0.34 * limp) if sd == "l" else 1.0                 # gamba sinistra "debole": passo corto, ginocchio meno flesso, piede che striscia
+            flex(f"thigh_stretch.{sd}", cr(HIP, p) * k_hip * w)
+            flex(f"leg_stretch.{sd}", -cr(KNEE, p) * k_knee * (w if sd == "l" else 1.0))
+            flex(f"foot.{sd}", cr(ANKLE, p) * (0.8 + 0.2 * k_hip) - (9 * limp * max(0.0, math.sin(2 * math.pi * p)) if sd == "l" else 0.0))
             # braccia in opposizione alle gambe: avanti quando la gamba opposta è avanti
             c = math.cos(2 * math.pi * (p + 0.5))                     # + = braccio avanti
             fwd_amt = c
-            flex(f"arm_stretch.{sd}", arm_bias + arm_sw * fwd_amt)
-            flex(f"forearm_stretch.{sd}", elbow + elbow * 0.45 * max(0.0, fwd_amt) + 6)
+            asym = (1 - arm_asym) if sd == "r" else 1.0                  # braccio destro più pendente e meno mosso
+            flex(f"arm_stretch.{sd}", arm_bias + (14 * arm_asym if sd == "r" else 0) + arm_sw * fwd_amt * asym)
+            flex(f"forearm_stretch.{sd}", elbow + elbow * 0.45 * max(0.0, fwd_amt) * asym + 6 + (22 * arm_asym if sd == "r" else 0))
             abd(f"arm_stretch.{sd}", sd, 3 + 2 * abs(fwd_amt))
         s = math.cos(2 * math.pi * ph); sn = math.sin(2 * math.pi * ph)
         yaw("root.x", -pelv_yaw * s)                                    # a tallone sinistro a terra l'anca sinistra è avanti (bacino ruota a destra)
@@ -147,11 +149,13 @@ def build_animations(arm, arm_drop_deg=None):
         roll("spine_02.x", -pelv_obl * 0.8 * sn)
         tilt("spine_01.x", lean * 0.6); tilt("spine_02.x", lean * 0.4)
         yaw("head.x", (pelv_yaw - torso_ctr * 1.5) * s * 0.9)           # la testa resta ferma nello spazio
-        roll("head.x", head_roll * math.sin(2 * math.pi * ph * 2))
+        roll("head.x", head_roll * math.sin(2 * math.pi * ph * 2) + head_drop * 0.9 * math.sin(2 * math.pi * ph + 0.7))
+        tilt("neck.x", head_drop * 1.4); roll("root.x", 3.5 * limp * math.sin(2 * math.pi * ph + 1.2))
         shift("root.x", right * (-shoulder_sway * sn))   # sposta il peso sul piede d'appoggio
         ground(lift * (0.5 + 0.5 * math.cos(4 * math.pi * ph)) if flight else 0.0)
     def walk(ph, f, n): gait(ph, 0.9, 0.95, 0, 4, 10, 17, 4.5, 2.6, 5.5, 0.018, 0, 6, 1.2)
     def run(ph, f, n): gait(ph, 1.45, 1.55, 0, 16, 52, 38, 8, 3, 9, 0.012, 0.05, 6, 1.5, flight=1.0)
+    def shamble(ph, f, n): gait(ph, 0.78, 0.8, 0, 13, 14, 12, 5.5, 4.0, 4.0, 0.03, 0, 10, 2.5, limp=1.0, head_drop=7, arm_asym=0.55)
 
     # ---------------------------------------------------------------------------------------------------------------------------
     def idle(ph, f, n):
@@ -167,13 +171,6 @@ def build_animations(arm, arm_drop_deg=None):
             flex(f"arm_stretch.{sd}", 3 + 1.8 * math.sin(2 * math.pi * ph + k + 1.0))
             flex(f"forearm_stretch.{sd}", 14 + 3 * math.sin(2 * math.pi * ph + k + 1.6))
         yaw("head.x", 2.5 * math.sin(2 * math.pi * ph * 2 + 0.4)); tilt("head.x", 1.2 * math.sin(2 * math.pi * ph * 3 + 1.1))
-        ground()
-    SCAN = [(0.00, 0), (0.14, 0), (0.30, 46), (0.44, 48), (0.56, 0), (0.64, -3), (0.80, -50), (0.92, -48)]      # gradi di rotazione della testa
-    def scan(ph, f, n):
-        idle(ph, f, n)
-        a = cr(SCAN, ph)
-        yaw("head.x", a * 0.62); yaw("neck.x", a * 0.2); yaw("spine_03.x", a * 0.14); yaw("spine_02.x", a * 0.1); yaw("root.x", a * 0.06)
-        roll("head.x", -a * 0.06); tilt("head.x", -2 * abs(a) / 48.0)
         ground()
     def hit(ph, f, n):
         env = ease(ph, 0.0, 0.2) * (1 - ease(ph, 0.2, 1.0))
@@ -217,26 +214,53 @@ def build_animations(arm, arm_drop_deg=None):
         low = min(min(wh(pb.name).z, wt(pb.name).z) for pb in arm.pose.bones)
         shift("root.x", up * (GROUND + 0.11 * fall - low)); upd()
 
-    def aim_base(ph):
-        """Posa di tiro a due mani: braccio destro teso verso il bersaglio con la pistola, sinistro piegato a sostenere, busto di tre quarti."""
-        b = math.sin(2 * math.pi * ph)
-        flex("arm_stretch.r", 88 + 0.8 * b); flex("forearm_stretch.r", 6); abd("arm_stretch.r", "r", -2); yaw("arm_stretch.r", 17)
-        flex("arm_stretch.l", 74 + 0.6 * b); flex("forearm_stretch.l", 20); yaw("arm_stretch.l", -20)
-        yaw("root.x", -6); yaw("spine_02.x", -8); yaw("spine_03.x", -4); tilt("spine_02.x", 3); tilt("neck.x", -10); tilt("head.x", -3); roll("head.x", 6)
-        flex("thigh_stretch.l", 12); flex("leg_stretch.l", -9); flex("thigh_stretch.r", -9); flex("leg_stretch.r", -7)
-        roll("spine_02.x", 0.6 * b); tilt("spine_03.x", 0.6 * b)
-    def aim(ph, f, n):
-        aim_base(ph); ground()
-    def fire(ph, f, n):
-        aim_base(0.0)
-        e = (ph / 0.15 if ph < 0.15 else (1 - ph) ** 2 / (0.85 ** 2)) if ph > 0 else 0.0
-        flex("arm_stretch.r", 10 * e); flex("forearm_stretch.r", 7 * e); flex("arm_stretch.l", 6 * e)
-        tilt("spine_02.x", -3 * e); tilt("spine_03.x", -3 * e); tilt("neck.x", 2 * e); shift("root.x", fwd * (-0.015 * e))
+    def swipe(ph, f, n):
+        # graffio laterale con il braccio destro: carica verso l'esterno e indietro, poi spazza davanti al busto da destra a sinistra (impatto ≈ fase 0.46)
+        wind = ease(ph, 0.0, 0.30) * (1 - ease(ph, 0.34, 0.44))
+        strike = ease(ph, 0.34, 0.47) * (1 - ease(ph, 0.56, 0.95))
+        back = ease(ph, 0.0, 0.30) * (1 - ease(ph, 0.34, 0.47))
+        flex("arm_stretch.r", -28 * back + 78 * strike); abd("arm_stretch.r", "r", 46 * back - 6 * strike); yaw("arm_stretch.r", -10 * back + 16 * strike)
+        flex("forearm_stretch.r", 70 * back + 24 * strike)
+        flex("arm_stretch.l", -14 * back + 28 * strike); flex("forearm_stretch.l", 30 + 10 * strike)
+        yaw("spine_02.x", -22 * back + 20 * strike); yaw("spine_03.x", -10 * back + 12 * strike); yaw("root.x", -8 * back + 10 * strike); yaw("head.x", 8 * back - 12 * strike)
+        tilt("spine_01.x", -4 * back + 10 * strike); tilt("spine_02.x", -4 * back + 12 * strike); tilt("neck.x", 4 * strike)
+        flex("thigh_stretch.l", 24 * strike - 4 * back); flex("leg_stretch.l", -(14 * strike + 6 * back))
+        flex("thigh_stretch.r", -12 * strike + 4 * back); flex("leg_stretch.r", -(10 * strike + 3 * back)); flex("foot.r", 8 * strike)
+        shift("root.x", fwd * (0.14 * strike - 0.04 * back))
         ground()
+    def death_f(ph, f, n):
+        # le ginocchia cedono, il busto crolla in avanti, le braccia cercano di attutire la caduta, la testa gira di lato
+        buck = ease(ph, 0.05, 0.38); fall = ease(ph, 0.25, 0.66); settle = math.sin(max(0.0, ph - 0.72) / 0.28 * math.pi * 2) * (1 - ease(ph, 0.72, 1.0))
+        tilt("spine_02.x", 10 * buck + 18 * fall); tilt("spine_03.x", 8 * fall); tilt("neck.x", 6 * buck)
+        flex("thigh_stretch.l", 34 * buck); flex("leg_stretch.l", -(80 * buck)); flex("thigh_stretch.r", 26 * buck); flex("leg_stretch.r", -(72 * buck))
+        flex("foot.l", -22 * buck); flex("foot.r", -18 * buck)
+        flex("root.x", -(80 * fall) + 1.2 * settle); yaw("root.x", -8 * fall)
+        for sd, k in (("l", 1), ("r", -1)):
+            flex(f"arm_stretch.{sd}", 40 * ease(ph, 0.1, 0.45) + 52 * fall); flex(f"forearm_stretch.{sd}", 30 * (1 - fall) + 10 * fall); abd(f"arm_stretch.{sd}", sd, 12 * fall)
+        yaw("head.x", 38 * fall)
+        upd()
+        low = min(min(wh(pb.name).z, wt(pb.name).z) for pb in arm.pose.bones)
+        shift("root.x", up * (GROUND + 0.12 * fall - low)); upd()
 
-    make_action("Idle", 96, idle); make_action("Scan", 120, scan)
-    make_action("Walk", 26, walk); make_action("Run", 18, run)
-    make_action("Aim", 48, aim); make_action("Fire", 10, fire); make_action("Attack", 30, attack); make_action("Hit", 14, hit); make_action("Death", 48, death)
+    make_action("Idle", 96, idle)
+    make_action("Walk", 26, walk); make_action("Shamble", 32, shamble, slump=1.3); make_action("Run", 18, run)
+    make_action("Attack", 30, attack); make_action("Swipe", 30, swipe); make_action("Hit", 14, hit); make_action("Death", 48, death); make_action("DeathF", 54, death_f)
+
+    def fix_ground(action_name, n, margin_fn):
+        """Rivaluta l'azione COME FARÀ L'ESPORTATORE (frame_set) e corregge l'altezza della radice frame per frame: il punto più basso
+        resta a `margin_fn(fase)` dal pavimento. Necessario per le cadute, dove la posa registrata e quella valutata possono differire."""
+        act = bpy.data.actions[action_name]; arm.animation_data.action = act
+        if getattr(act, "slots", None) and len(act.slots): arm.animation_data.action_slot = act.slots[0]
+        root = arm.pose.bones["root.x"]
+        for f in range(1, n + 2):
+            sc.frame_set(f); upd()
+            low = min(min(wh(pb.name).z, wt(pb.name).z) for pb in arm.pose.bones)
+            dz = GROUND + margin_fn((f - 1) / n) - low
+            if abs(dz) > 1e-4:
+                root.location = root.location + REST["root.x"].inverted() @ (up * dz); root.keyframe_insert("location", frame=f)
+        reset()
+    fix_ground("Death", 48, lambda ph: 0.14 * ease(ph, 0.3, 0.82))
+    fix_ground("DeathF", 54, lambda ph: 0.16 * ease(ph, 0.25, 0.66))
 
     # velocità di riferimento (m/s): velocità all'indietro (rispetto al bacino) del piede mentre è a terra = velocità di avanzamento del corpo
     def stride_speed(action_name, n):
@@ -255,7 +279,7 @@ def build_animations(arm, arm_drop_deg=None):
                 if gr[i][sd] and gr[i + 1][sd]: vs.append((pos[i][sd] - pos[i + 1][sd]) * 24.0)
         vs = sorted(v for v in vs if v > 0.2)                    # il piede in volo che sfiora il suolo va in avanti: scartato
         return vs[len(vs) // 2] if vs else 0.0                    # mediana (il rotolamento del tallone ha picchi)
-    SPEEDS = {"walk": round(stride_speed("Walk", 26), 3), "run": round(stride_speed("Run", 18), 3)}
+    SPEEDS = {"walk": round(stride_speed("Walk", 26), 3), "shamble": round(stride_speed("Shamble", 32), 3), "run": round(stride_speed("Run", 18), 3)}
     print("SPEEDS", SPEEDS)
     reset(); arm.animation_data.action = bpy.data.actions["Idle"]
     return SPEEDS

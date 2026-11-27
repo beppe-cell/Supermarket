@@ -45,7 +45,7 @@ function pbr(scene: Scene, name: string, urls: [string, string, string], tint = 
   m.metallic = 1; m.roughness = 1; // moltiplicatori: i valori reali vengono dalla texture ORM
   m.albedoColor = new Color3(tint, tint, tint);
   m.maxSimultaneousLights = 6;
-  m.environmentIntensity = 0.3;
+  m.environmentIntensity = 0.15;
   return m;
 }
 
@@ -125,7 +125,6 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
   const freezerM = mat(scene, "freezer", "#7d8a92");
   const ceilM = pbr(scene, "ceiling", [ceilA, ceilN, ceilO], 0.75);
   const neonM = mat(scene, "neon", look.neonColor, true);
-  const emergM = mat(scene, "emerg", "#ff2a2a", true);
 
   const b = ZONE1.bounds;
   const W = b.maxX - b.minX, D = b.maxZ - b.minZ;
@@ -170,19 +169,6 @@ export async function buildZone1(engine: Engine | WebGPUEngine, q: QualityProfil
     l.diffuse = new Color3(...look.neonLightColor); l.intensity = look.neonIntensity; l.range = 14;
     lights.push({ l, base: look.neonIntensity, seed: i * 17.3 });
   });
-
-  const emerg = ZONE1.emergencyLights.map((e, i) => {
-    const s = MeshBuilder.CreateBox(`em${i}`, { width: 0.3, height: 0.3, depth: 0.3 }, scene);
-    s.position.set(e.x, 2.8, e.z);
-    return s;
-  });
-  const emBudget = Math.max(0, q.maxDynamicLights - 1 - lightSpots.length);
-  ZONE1.emergencyLights.slice(0, Math.max(emBudget, q.maxDynamicLights > 1 ? 1 : 0)).forEach((e, i) => {
-    const l = new PointLight(`el${i}`, new Vector3(e.x, 2.6, e.z), scene);
-    l.diffuse = new Color3(1, 0.12, 0.1); l.intensity = look.emergencyIntensity; l.range = 11;
-  });
-  const emMerged = Mesh.MergeMeshes(emerg, true, true);
-  if (emMerged) { emMerged.material = emergM; emMerged.freezeWorldMatrix(); }
 
   // Porte
   const interactables: Interactable[] = [];

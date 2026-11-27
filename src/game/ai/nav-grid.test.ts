@@ -60,4 +60,14 @@ describe("perception", () => {
     expect(detectionRange(10, { torch: false, sprinting: true, crouching: false })).toBeGreaterThan(10);
     expect(detectionRange(10, { torch: false, sprinting: false, crouching: true })).toBeLessThan(10);
   });
+
+  it("flow field: seguendo le direzioni si raggiunge il bersaglio aggirando un muro", () => {
+    const g = new NavGrid(0, 0, 10, 10, 0.5);
+    g.blockBox(5, 4, 0.5, 6, 0);                       // muro verticale con passaggio in alto (z>7)
+    const field = g.flowField({ x: 9, z: 1 });
+    let p = { x: 1, z: 1 }; let steps = 0;
+    while (Math.hypot(p.x - 9, p.z - 1) > 0.8 && steps++ < 200) { const d = g.flowDir(field, p.x, p.z); if (!d) break; p = { x: p.x + d.x * 0.25, z: p.z + d.z * 0.25 }; }
+    expect(Math.hypot(p.x - 9, p.z - 1)).toBeLessThan(0.9);
+    expect(g.flowDir(field, 4.9, 4)).toBeDefined();
+  });
 });

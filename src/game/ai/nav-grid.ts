@@ -88,4 +88,50 @@ export class NavGrid {
     }
     return out;
   }
+
+  /** Campo di distanze (Dijkstra a 8 direzioni) dal bersaglio: serve a far seguire a un'orda intera un solo calcolo. Infinity = irraggiungibile. */
+  flowField(target: Pt): Float32Array {
+    const dist = new Float32Array(this.w * this.h).fill(Infinity);
+    const t0 = this.toCell(target.x, target.z), t = this.nearestFree(t0[0], t0[1]);
+    if (!t) return dist;
+    const W = this.w;
+    // coda a bucket (costi 1 e √2): più semplice e veloce di uno heap per griglie piccole
+    let heap: number[] = [t[1] * W + t[0]]; dist[t[1] * W + t[0]] = 0;
+    const pushed: number[] = [];                                     // heap binario (indici) con priorità = dist corrente
+    const less = (a: number, b: number) => (dist[a] as number) < (dist[b] as number);
+    const up = (i: number) => { while (i > 0) { const p = (i - 1) >> 1; if (less(heap[i] as number, heap[p] as number)) { const x = heap[i] as number; heap[i] = heap[p] as number; heap[p] = x; i = p; } else break; } };
+    const down = (i: number) => { for (;;) { let m = i; const l = 2 * i + 1, r = l + 1; if (l < heap.length && less(heap[l] as number, heap[m] as number)) m = l; if (r < heap.length && less(heap[r] as number, heap[m] as number)) m = r; if (m === i) break; const x = heap[i] as number; heap[i] = heap[m] as number; heap[m] = x; i = m; } };
+    void pushed;
+    while (heap.length) {
+      const cur = heap[0] as number; const last = heap.pop() as number; if (heap.length) { heap[0] = last; down(0); }
+      const cx = cur % W, cz = Math.floor(cur / W), cd = dist[cur] as number;
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dz) continue;
+        const nx = cx + dx, nz = cz + dz;
+        if (this.isBlockedCell(nx, nz)) continue;
+        if (dx && dz && (this.isBlockedCell(cx + dx, cz) || this.isBlockedCell(cx, cz + dz))) continue;
+        const nk = nz * W + nx, nd = cd + (dx && dz ? Math.SQRT2 : 1);
+        if (nd < (dist[nk] as number)) { dist[nk] = nd; heap.push(nk); up(heap.length - 1); }
+      }
+    }
+    heap = [];
+    return dist;
+  }
+
+  /** Direzione (versore mondo) verso la cella vicina con distanza minore nel campo. Da celle bloccate/irraggiungibili: undefined. */
+  flowDir(field: Float32Array, x: number, z: number): Pt | undefined {
+    let [cx, cz] = this.toCell(x, z);
+    if (this.isBlockedCell(cx, cz)) { const n = this.nearestFree(cx, cz, 4); if (!n) return undefined; [cx, cz] = n; }
+    const W = this.w; let best = field[cz * W + cx] as number, bx = cx, bz = cz;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dz) continue;
+      const nx = cx + dx, nz = cz + dz;
+      if (this.isBlockedCell(nx, nz)) continue;
+      if (dx && dz && (this.isBlockedCell(cx + dx, cz) || this.isBlockedCell(cx, cz + dz))) continue;
+      const d = field[nz * W + nx] as number; if (d < best) { best = d; bx = nx; bz = nz; }
+    }
+    if (bx === cx && bz === cz) return undefined;
+    const w = this.toWorld(bx, bz), vx = w.x - x, vz = w.z - z, l = Math.hypot(vx, vz) || 1;
+    return { x: vx / l, z: vz / l };
+  }
 }

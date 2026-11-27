@@ -56,7 +56,7 @@ export async function createEnvironment(scene: Scene, size = 32): Promise<boolea
     tex.gammaSpace = false;
     await new HDRFiltering(scene.getEngine()).prefilter(tex);
     scene.environmentTexture = tex;
-    scene.environmentIntensity = 1;
+    scene.environmentIntensity = 0.35;
     return true;
   } catch (e) {
     console.warn("Mappa ambiente non disponibile:", e);

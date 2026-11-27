@@ -43,11 +43,12 @@ export class Player {
     this.camera.inputs.clear();
     scene.activeCamera = this.camera;
 
-    this.torch = new SpotLight("torch", Vector3.Zero(), new Vector3(0, 0, 1), 1.7, 1, scene);
-    this.torch.innerAngle = 0.4;
+    this.torch = new SpotLight("torch", Vector3.Zero(), new Vector3(0, 0, 1), 0.82, 6, scene);   // cono stretto (47°) e concentrato
+    this.torch.innerAngle = 0.28;
+    this.torch.renderPriority = 100;                                                  // sempre fra le luci attive dei materiali
     this.torch.diffuse = new Color3(1, 0.96, 0.86);
     this.torch.intensity = torchIntensity;
-    this.torch.range = 22;
+    this.torch.range = 38;
     this.torch.parent = this.camera;
   }
 

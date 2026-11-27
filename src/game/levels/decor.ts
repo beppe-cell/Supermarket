@@ -196,16 +196,20 @@ export function buildDecor(scene: Scene, q: QualityProfile): Decor {
   const glowM = new StandardMaterial("keycard-glow", scene); glowM.emissiveTexture = glowTex; glowM.opacityTexture = glowTex; glowM.disableLighting = true; glowM.backFaceCulling = false; glowM.alphaMode = 1; // additivo
   glow.material = glowM; glow.billboardMode = Mesh.BILLBOARDMODE_ALL; glow.isPickable = false; glow.isVisible = false; glow.alwaysSelectAsActiveMesh = true;
   keycard.computeWorldMatrix(true); glow.position.copyFrom(keycard.getAbsolutePosition()); glow.position.y += 0.05;
-  const NEAR = 4.5;
+  const NEAR = 20;
+  const beamM = new StandardMaterial("keycard-beam", scene); beamM.emissiveColor = new Color3(0.2, 1, 0.75); beamM.disableLighting = true; beamM.alpha = 0.5; beamM.alphaMode = 1; beamM.backFaceCulling = false;
+  const beam = MeshBuilder.CreateCylinder("keycard-beam", { height: 2.6, diameterTop: 0.02, diameterBottom: 0.16, tessellation: 10 }, scene);
+  beam.material = beamM; beam.isPickable = false; beam.isVisible = false; beam.position.set(kp.x, kp.y + 1.3, kp.z);
   buildMist(scene, q);
 
   return {
     keycard,
     tick(t, px, pz) {
-      if (keycard.isDisposed()) { glow.dispose(); return; }
+      if (keycard.isDisposed()) { glow.dispose(); beam.dispose(); return; }
       const near = Math.hypot(px - kp.x, pz - kp.z) < NEAR;
-      const on = near && Math.sin(t * 9) > 0;
-      glow.isVisible = on;
+      const on = near && Math.sin(t * 7) > -0.2;
+      glow.isVisible = on; beam.isVisible = on;
+      glow.scaling.setAll(1 + Math.min(20, Math.hypot(px - kp.x, pz - kp.z)) * 0.22);
       cardM.emissiveColor.set(0, on ? 0.3 : 0, on ? 0.22 : 0);
     },
   };

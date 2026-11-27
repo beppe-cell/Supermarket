@@ -21,7 +21,7 @@ import { createPostFx } from "./postfx";
 import { Sfx } from "./audio/sfx";
 import { loadModel } from "../game/assets";
 import { Pistol, type HitReport } from "../game/weapons/pistol";
-import { Infected } from "../game/enemies/infected";
+import { Horde } from "../game/enemies/horde";
 import { buildZone1Nav } from "../game/levels/zone1-nav";
 import type { Interactable } from "../game/interaction/interactable";
 
@@ -73,11 +73,10 @@ export class Game {
     const pistolRef = pistol;
     loader.set(0.75, "Nemici");
     const infectedModel = await loadModel(scene, "SM_Infected");
-    const enemies = [
-      Infected.create(scene, infectedModel, 1, { x: -4.4, z: 11 }, [{ x: -4.4, z: 11 }, { x: -4.4, z: 1.5 }, { x: -13.2, z: 1.5 }, { x: -13.2, z: 10 }, { x: -13.2, z: 15.2 }, { x: -4.4, z: 15.2 }], Math.PI),
-      Infected.create(scene, infectedModel, 2, { x: 8.8, z: 11 }, [{ x: 8.8, z: 11 }, { x: 8.8, z: 1.5 }, { x: 17.6, z: 1.5 }, { x: 17.6, z: -4 }, { x: 17.6, z: 10 }, { x: 13.2, z: 15.2 }, { x: 8.8, z: 15.2 }], 0),
-      Infected.create(scene, infectedModel, 3, { x: 22, z: -4 }, [{ x: 22, z: -4 }, { x: 22, z: 12 }, { x: 26.4, z: 12 }, { x: 26.4, z: -4 }], 0),
-    ].slice(0, this.quality.id === "low" ? 1 : this.quality.id === "medium" || this.touch ? 2 : 3);
+    // Orda dall'ingresso: dimensioni in base alla qualità/dispositivo (PC alta 40 totali, 20 vivi; telefono 24/10; bassa 12/6)
+    const hc = this.quality.id === "low" ? { total: 12, maxAlive: 6, waveSize: 3, interval: 7 } : this.touch || this.quality.id === "medium" ? { total: 24, maxAlive: 10, waveSize: 3, interval: 6 } : { total: 40, maxAlive: 20, waveSize: 5, interval: 6 };
+    const horde = new Horde(scene, infectedModel, grid, hc);
+    const enemies = horde.list;
 
     // --- HUD, inventario, obiettivi ---
     const hud = new Hud(document.body, dev.isTouch);
@@ -138,9 +137,8 @@ export class Game {
         enemies: () => enemies.map((e) => [e.state, e.hp, +e.position.x.toFixed(2), +e.position.z.toFixed(2)]),
         enemyTo: (i: number, x: number, z: number) => enemies[i]?.position.set(x, 0, z),
         gridInfo: (x0: number, z0: number, x1: number, z1: number) => [grid.lineClear({ x: x0, z: z0 }, { x: x1, z: z1 }), grid.isBlocked(x0, z0), grid.isBlocked(x1, z1)],
-        enemyFace: (i: number, yaw: number) => enemies[i]?.debugFace(yaw),
-        enemyBone: (i: number, n: string) => enemies[i]?.debugBone(n),
-        enemyInfo: (i: number) => enemies[i]?.debugInfo(),
+        startHorde: () => startHorde(),
+        hordeInfo: () => [horde.isStarted, horde.aliveCount, horde.remaining],
         enemyPlay: (i: number, name: string, loop: boolean, yaw?: number, frac?: number) => enemies[i]?.debugPlay(name, loop, yaw, frac),
         setFire: (v: boolean) => { dbgFire = v; },
         setAim: (v: boolean) => { dbgAim = v; },
@@ -154,8 +152,16 @@ export class Game {
     }
 
     loader.set(0.9, "Compilazione shader");
-    pistol.warmUp(); Infected.warmUp();
+    pistol.warmUp(); horde.warm(ZONE1.spawn.x, ZONE1.spawn.z + 2.6);
     await scene.whenReadyAsync();
+    /** L'ingresso cede: la porta si apre e l'orda entra dalla bussola vicino alle casse. */
+    const startHorde = (): void => {
+      if (horde.isStarted) return;
+      const door = scene.getMeshByName("door-entrance"); if (door) { door.setEnabled(false); door.checkCollisions = false; }
+      const ii = level.interactables.findIndex((i) => i.mesh === door); if (ii >= 0) level.interactables.splice(ii, 1);
+      sfx.clank(3, 0); sfx.rattle(2); hud.message("L'ingresso cede: stanno entrando!", "item");
+      horde.start();
+    };
     const step = new FixedTimestep(1 / 60);
     const obstacles = zone1Obstacles();
     const autoCool = new Map<Interactable, number>();
@@ -183,7 +189,7 @@ export class Game {
         const moving = input.moveX !== 0 || input.moveY !== 0;
         const sprinting = moving && input.sprint && player.stamina.canSprint && !input.crouch;
         if (!dead) pistol.update(dt, { fire: input.fire || dbgFire, reload: input.reload || dbgReload, aim: dbgAim }, { moving, sprinting }, {
-          onShot: () => { const p = { x: player.position.x, z: player.position.z }; for (const e of enemies) if (Vector3.Distance(e.position, player.position) < 32) e.hear(p); },
+          onShot: () => { /* tutta l'orda insegue già il giocatore */ },
           onRecoil: (p, y) => player.addRecoil(p, y),
           onReport: (r: HitReport) => {
             if (r.kind === "enemy" && r.enemy && r.part) { const killed = r.enemy.hit(r.part, { sfx, player: player.position }); hud.hitMarker(killed); }
@@ -191,18 +197,17 @@ export class Game {
             if (mv && r.point && r.dir) { mv.hit(r.dir.x, r.dir.z, r.point.x, r.point.z); sfx.rattle(Vector3.Distance(mv.collider.position, player.position)); }
           },
         });
-        const ctxE = {
-          player: player.position, eye: player.camera.globalPosition, grid, sfx, playerAlive: !dead && time > 5, // 5 s di tregua all'inizio: nessuno spara appena nasci
-          playerFlags: { torch: true, sprinting, crouching: player.isCrouching },
+        // orda: parte quando il giocatore lascia l'area dell'ingresso o dopo 40 s
+        if (!horde.isStarted && !dead && (time > 40 || player.position.z > -6)) startHorde();
+        horde.update(dt, player.position, {
+          playerAlive: !dead, sfx,
           hurtPlayer: (n: number, from: Vector3) => {
             player.damage(n); sfx.playerHurt();
             let a = Math.atan2(from.x - player.position.x, from.z - player.position.z) - player.yawAngle;
             while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI;
             hud.hurt(a);
           },
-        };
-        for (const e of enemies) e.update(dt, ctxE);
-        Infected.updateFx(dt);
+        });
         // oggetti mobili (carrelli): fisica semplice, ostacoli = muri/scaffali/altri carrelli
         for (const m of level.movables) {
           if (!m.moving) continue;
@@ -220,7 +225,7 @@ export class Game {
       // Suggerimento "clicca per giocare" quando il mouse non è catturato (solo desktop)
       hud.setLockHint(!dev.isTouch && !paused && !dead && document.pointerLockElement !== this.canvas);
       scene.render();
-      if (framesShown < 3 && ++framesShown === 3) loader.done(); // dopo i primi frame (shader e texture già pronti)
+      if (framesShown < 3 && ++framesShown === 3) loader.done(); horde.endWarm(); // dopo i primi frame (shader e texture già pronti)
       this.tickDebug(dt, scene.getActiveMeshes().length, hud);
     });
   }
